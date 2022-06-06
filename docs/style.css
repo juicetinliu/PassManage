@@ -1,0 +1,130 @@
+html, body {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    background-color: #e9e9e9;
+}
+  
+* {
+    font-family: Calibri, 'Trebuchet MS', sans-serif;
+    font-size: 16px;
+}
+  
+body {
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+
+#main-panel {
+    overflow: hidden;
+}
+
+#main-content {
+}
+
+#inputPassword {
+    border: 5px solid #bae2ff;
+    border-radius: 5px;
+}
+
+#inputPassword:hover {
+    border-color: #6db8ed;;
+}
+
+.v {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+}
+  
+.h {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+  
+.hv-c {
+    justify-content: center;
+}
+  
+.hv-l {
+    justify-content: flex-start;
+}
+  
+.hv-r {
+    justify-content: flex-end;
+}
+  
+.vh-c {
+    align-items: center;
+}
+  
+.vh-t {
+    align-items: flex-start;
+}
+  
+.vh-b {
+    align-items: flex-end;
+}
+  
+.p {
+    margin: 15px;
+    padding: 15px;
+}
+  
+.p-out {
+    box-shadow: -10px -10px 15px rgba(255,255,255,0.5), 10px 10px 15px rgba(100,70,70,0.12);
+}
+  
+.p-in {
+    box-shadow: inset -10px -10px 15px rgba(255,255,255,0.5), inset 10px 10px 15px rgba(100,70,70,0.12);
+}
+  
+.p-round {
+    border-radius: 15px;
+}
+  
+  
+  
+.butt {
+    cursor: pointer;
+    box-shadow: -10px -10px 15px rgba(255,255,255,0.5), 10px 10px 15px rgba(100,70,70,0.12);
+    border-radius: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 15px;
+    padding: 5px;
+    transition: background-color .4s;
+    border: none;
+}
+  
+.butt:active {
+    box-shadow: inset -10px -10px 15px rgba(255,255,255,0.5), inset 10px 10px 15px rgba(70,70,70,0.12);
+}
+  
+.txt {
+    margin: 5px 15px 5px 15px;
+}
+  
+.hide {
+    display: none;
+}
+  
+.unhide {
+    display: flex;
+}
+  
+
+
+#drop_zone {
+    border: 5px solid #bae2ff;
+    background-color: #d4e3ee;
+    width:  250px;
+    height: 150px;
+}
+
+#drop_zone:hover {
+    border: 5px dashed  #6db8ed;
+}

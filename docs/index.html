@@ -1,0 +1,37 @@
+<html>
+<head>
+  <title>PassManage</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" type="image/x-icon" href="https://juicetinliu.github.io/favicon.ico">
+  <script language="javascript" type="text/javascript" src="https://juicetinliu.github.io/misc.js"></script>
+
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.js"></script>
+
+  <script language="javascript" type="text/javascript" src="pass.js"></script>
+  <script language="javascript" type="text/javascript" src="html.js"></script>
+  <script language="javascript" type="text/javascript" src="docs.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div id="main">
+    <div id="main-panel" class="p p-out p-round">
+      <div id="main-content" class="h hv-c vh-c">
+        <div id="login">
+          <input id="inputPassword" type="password" name="inputPassword">
+          <button>
+            next
+          </button>
+        </div>
+        <div id="drop_zone" class="p p-in p-round v hv-c vh-c" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
+          <div>Drag file</div>
+          <div>or</div>
+          <input id="inputPasswordFile" type="file" name="inputPasswordFile" title="ha"/>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
