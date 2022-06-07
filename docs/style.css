@@ -20,15 +20,17 @@ body {
     overflow: hidden;
 }
 
-#main-content {
+#input-user {
+    margin-bottom: 0px;
 }
 
-#inputPassword {
+.text-input {
     border: 5px solid #bae2ff;
     border-radius: 5px;
+    margin: 15px;
 }
 
-#inputPassword:hover {
+.text-input:hover {
     border-color: #6db8ed;;
 }
 
@@ -86,7 +88,6 @@ body {
 }
   
   
-  
 .butt {
     cursor: pointer;
     box-shadow: -10px -10px 15px rgba(255,255,255,0.5), 10px 10px 15px rgba(100,70,70,0.12);
@@ -96,8 +97,17 @@ body {
     align-items: center;
     margin: 15px;
     padding: 5px;
-    transition: background-color .4s;
+    transition: background-color 1s;
     border: none;
+}
+
+.butt-main {
+    background-color: #bae2ff;
+}
+
+
+.butt-main:hover {
+    background-color: #6db8ed;
 }
   
 .butt:active {
@@ -116,15 +126,29 @@ body {
     display: flex;
 }
   
+#input-password-file {
+    opacity: 0.0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
 
-
-#drop_zone {
+#drop-zone {
     border: 5px solid #bae2ff;
     background-color: #d4e3ee;
     width:  250px;
     height: 150px;
+    position: relative;
+    gap: 10px;
 }
 
-#drop_zone:hover {
+#drop-zone:hover {
     border: 5px dashed  #6db8ed;
+}
+
+.drop-zone-active {
+    border: 5px solid #6db8ed !important;
 }

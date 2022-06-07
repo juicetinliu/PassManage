@@ -1,4 +1,5 @@
 //https://www.cdnpkg.com/crypto-js/4.0.0
+//https://cryptojs.gitbook.io/docs/
 
 const PassConfig = {
     PassEntryValueSeparator: "[|]",
@@ -109,7 +110,7 @@ class PassManager {
     constructor(config = PassConfig) {
         this.encoding = CryptoJS.enc.Base64;
         this.masterPasswordHash = null;
-        this.deviceSecretHash = this._generateDeviceSecretHash();
+        this.saltyHash = null; 
         this.entries = [];
         this.passHandler = new AESHandler();
         
@@ -120,15 +121,19 @@ class PassManager {
         this.masterPasswordHash = CryptoJS.SHA256(masterPassword).toString(this.encoding);
     }
 
-    _generateDeviceSecretHash() {
+    saveUsernametoSaltyHash(username) {
+        this.saltyHash = CryptoJS.SHA256(username + this._generateSecretHash()).toString(this.encoding);
+    }
+    
+    _generateSecretHash() {
         return "secretHash";
     }
 
     _generateMasterKey() {
         if(!this.masterPasswordHash) throw new Error('Missing master password hash');
-        if(!this.deviceSecretHash) throw new Error('Missing device secret hash');
+        if(!this.saltyHash) throw new Error('Missing salty hash');
 
-        return CryptoJS.PBKDF2(this.masterPasswordHash, this.deviceSecretHash, {
+        return CryptoJS.PBKDF2(this.masterPasswordHash, this.saltyHash, {
             keySize: 32,
             iterations: 100000
         }).toString();

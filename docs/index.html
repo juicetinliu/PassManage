@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="shortcut icon" type="image/x-icon" href="https://juicetinliu.github.io/favicon.ico">
-  <script language="javascript" type="text/javascript" src="https://juicetinliu.github.io/misc.js"></script>
 
+  <script language="javascript" type="text/javascript" src="https://juicetinliu.github.io/misc.js"></script>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.js"></script>
 
   <script language="javascript" type="text/javascript" src="pass.js"></script>
@@ -13,6 +13,7 @@
   <script language="javascript" type="text/javascript" src="docs.js"></script>
 
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,600,0,200" />
 </head>
 
 <body>
@@ -20,15 +21,24 @@
     <div id="main-panel" class="p p-out p-round">
       <div id="main-content" class="h hv-c vh-c">
         <div id="login">
-          <input id="inputPassword" type="password" name="inputPassword">
-          <button>
-            next
-          </button>
+          <div id="login-content" class="v hv-c vh-c">
+            <input id="input-user" type="username" name="input-user" class="text-input">
+            <input id="input-password" type="password" name="input-password" class="text-input">
+            <button class="butt butt-main">
+              <span class="material-symbols-rounded">
+                arrow_forward
+              </span>
+            </button>
+          </div>
         </div>
-        <div id="drop_zone" class="p p-in p-round v hv-c vh-c" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
-          <div>Drag file</div>
-          <div>or</div>
-          <input id="inputPasswordFile" type="file" name="inputPasswordFile" title="ha"/>
+        <div id="drop" style="">
+          <div id="drop-zone" class="p p-in p-round v hv-c vh-c" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
+            <div>Click or Drag file</div>
+            <span class="material-symbols-rounded">
+              upload
+            </span>
+            <input id="input-password-file" type="file" name="input-password-file" title="ha"/>
+          </div>
         </div>
       </div>
     </div>
