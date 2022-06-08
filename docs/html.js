@@ -44,8 +44,9 @@ const CurrentPage = {
 }
 
 class App {
-    //first login 
-    //then upload file
+    //upload file
+    //login 
+    //see entries
     constructor() {
         this.p = new PassManager();
 
@@ -116,13 +117,6 @@ class App {
 
                 this.p.saveMasterPasswordToHash(pw);
                 this.inputPassword.getElement().value = "";
-
-                // if(this.passFile.decryptFile(pw)) {
-                //     this.p.saveDeviceSecretToHash(this.passFile.getFirst());
-                //     this.p.setEntries(this.p.entriesFromStrings(this.passFile.getEntries()));
-                // }else{
-                //     console.log("wrong username");
-                // }
             }.bind(this));
     }
 

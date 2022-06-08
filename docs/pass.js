@@ -243,14 +243,11 @@ class AESHandler extends PassHandler {
 
 
 
-class PassFile { //decrypted using username
+class PassFile {
     constructor(raw, config = PassConfig) {
         this.config = config;
-        // this.encoding = CryptoJS.enc.Base64;
-        // this.passHandler = new AESHandler();
 
         this.raw = raw;
-        // this.backup = raw;
 
         this.first = null;
         this.last = null;
@@ -276,34 +273,7 @@ class PassFile { //decrypted using username
         this.entries = fsplit;
     }
 
-    // decryptFile(key) {
-    //     if(!key) throw new Error("key needed to decrypt PassFile");
-        
-    //     this.raw = this.passHandler.decryptToString(this.raw, key) ;
-        
-    //     try {
-    //         this.processFile();
-    //     } catch (e) {
-    //         console.log(e);
-    //         console.log("Couldn't process file");
-    //         this._reset();
-    //         return false;
-    //     }
-
-    //     if(this.verify()) {
-    //         return true;
-    //     } else {
-    //         this._reset();
-    //         return false;
-    //     }
-    // }
-
-    // verify() { //true if last line is hash of first line
-    //     return this.last === CryptoJS.SHA256(this.first).toString(this.encoding);
-    // }
-
     _reset() {
-        // this.raw = this.backup;
         this.first = null;
         this.last = null;
         this.entries = null;
