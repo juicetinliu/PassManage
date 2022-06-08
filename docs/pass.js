@@ -10,6 +10,7 @@ const PassConfig = {
 class PassEntry {
     constructor(config = PassConfig) {
         this.tag = ""; //Unique identifier like website or name
+        this.website = "";
         this.username = "";
         this.email = "";
         this.altEmail = "";
@@ -29,6 +30,12 @@ class PassEntry {
 
     getTag() {
         return this.tag;
+    }
+
+    setWebsite(website) {
+        if(website) {
+            this.website = website;
+        }
     }
 
     setUsername(username) {
@@ -76,6 +83,7 @@ class PassEntry {
     toString() {
         let out = [
             this.tag,
+            this.website,
             this.username,
             this.email,
             this.altEmail,
@@ -90,17 +98,18 @@ class PassEntry {
     fromString(str) {
         let values = str.split(this.config.PassEntryValueSeparator);
         
-        if(values.length != 8) throw new Error('Not enough fields to reconstruct PassEntry from string');
+        if(values.length != 9) throw new Error('Not enough fields to reconstruct PassEntry from string');
 
         let out = new PassEntry();
         out.setTag(values[0]);
-        out.setUsername(values[1]);
-        out.setEmail(values[2]);
-        out.setAltEmail(values[3]);
-        out.setPassword(values[4]);
-        values[5].split(this.config.PassEntryArraySeparator).forEach(val => out.addToSecrets(val));
-        values[6].split(this.config.PassEntryArraySeparator).forEach(val => out.addToHints(val));
-        values[7].split(this.config.PassEntryArraySeparator).forEach(val => out.addToComments(val));
+        out.setWebsite(values[1]);
+        out.setUsername(values[2]);
+        out.setEmail(values[3]);
+        out.setAltEmail(values[4]);
+        out.setPassword(values[5]);
+        values[6].split(this.config.PassEntryArraySeparator).forEach(val => out.addToSecrets(val));
+        values[7].split(this.config.PassEntryArraySeparator).forEach(val => out.addToHints(val));
+        values[8].split(this.config.PassEntryArraySeparator).forEach(val => out.addToComments(val));
 
         return out;
     }
@@ -110,7 +119,7 @@ class PassManager {
     constructor(config = PassConfig) {
         this.encoding = CryptoJS.enc.Base64;
         this.masterPasswordHash = null;
-        this.saltyHash = null; 
+        this.deviceSecretHash = null;
         this.entries = [];
         this.passHandler = new AESHandler();
         
@@ -121,17 +130,13 @@ class PassManager {
         this.masterPasswordHash = CryptoJS.SHA256(masterPassword).toString(this.encoding);
     }
 
-    saveUsernametoSaltyHash(username) {
-        this.saltyHash = CryptoJS.SHA256(username + this._generateSecretHash()).toString(this.encoding);
-    }
-    
-    _generateSecretHash() {
-        return "secretHash";
+    saveDeviceSecretToHash(deviceSecret) {
+        this.deviceSecretHash = CryptoJS.SHA256(deviceSecret).toString(this.encoding);
     }
 
     _generateMasterKey() {
         if(!this.masterPasswordHash) throw new Error('Missing master password hash');
-        if(!this.saltyHash) throw new Error('Missing salty hash');
+        if(!this.deviceSecretHash) throw new Error('Missing device secret hash');
 
         return CryptoJS.PBKDF2(this.masterPasswordHash, this.saltyHash, {
             keySize: 32,
@@ -139,11 +144,12 @@ class PassManager {
         }).toString();
     }
 
-    addPassEntry(tag = "", username = "", email = "", altEmail = "", password = "", secrets = [], hints = [], comments = []) {
+    addPassEntry(tag = "", website = "", username = "", email = "", altEmail = "", password = "", secrets = [], hints = [], comments = []) {
         let masterKey = this._generateMasterKey();
 
         let entry = new PassEntry();
         entry.setTag(tag);
+        entry.setWebsite(website);
         entry.setUsername(username);
         entry.setEmail(email);
         entry.setAltEmail(altEmail);
@@ -171,9 +177,10 @@ class PassManager {
         return this.passHandler.decryptToString(str, masterKey);
     }
 
-    entriesFromString(str) {
-        let passEntryStrings = str.split(this.config.PassEntrySeparator);
-        let passEntries = []
+    entriesFromStrings(passEntryStrings) {
+        if(!Array.isArray(passEntryStrings)) throw new Error("strings should be in an Array");
+
+        let passEntries = [];
         passEntryStrings.forEach(passEntryString => {
             passEntries.push(new PassEntry().fromString(passEntryString));
         });
@@ -222,22 +229,91 @@ class AESHandler extends PassHandler {
     }
 
     encryptToString(stringToEncrypt, key, encoding = null) {
-        return this.hashToString(CryptoJS.AES.encrypt(stringToEncrypt, key), encoding);
+        return this._hashToString(CryptoJS.AES.encrypt(stringToEncrypt, key), encoding);
     }
 
     decryptToString(encryptedString, key, encoding = CryptoJS.enc.Utf8) {
-        return this.hashToString(CryptoJS.AES.decrypt(encryptedString, key), encoding);
+        return this._hashToString(CryptoJS.AES.decrypt(encryptedString, key), encoding);
     }
 
-    hashToString(hash, encoder) {
+    _hashToString(hash, encoder) {
         return hash.toString(encoder)
     }
 }
 
+
+
+class PassFile { //decrypted using username
+    constructor(raw, config = PassConfig) {
+        this.config = config;
+        // this.encoding = CryptoJS.enc.Base64;
+        // this.passHandler = new AESHandler();
+
+        this.raw = raw;
+        // this.backup = raw;
+
+        this.first = null;
+        this.last = null;
+        this.entries = null;
+
+        this.processFile();
+    }
+
+    getFirst() {
+        return this.first;
+    }
+
+    getEntries() {
+        return this.entries;
+    }
+
+    processFile() {
+        let fsplit = this.raw.split(this.config.PassEntrySeparator);
+        if(fsplit.length < 2) throw new Error("PassFile needs at least 2 lines");
+
+        this.first = fsplit.shift();
+        this.last = fsplit.pop();
+        this.entries = fsplit;
+    }
+
+    // decryptFile(key) {
+    //     if(!key) throw new Error("key needed to decrypt PassFile");
+        
+    //     this.raw = this.passHandler.decryptToString(this.raw, key) ;
+        
+    //     try {
+    //         this.processFile();
+    //     } catch (e) {
+    //         console.log(e);
+    //         console.log("Couldn't process file");
+    //         this._reset();
+    //         return false;
+    //     }
+
+    //     if(this.verify()) {
+    //         return true;
+    //     } else {
+    //         this._reset();
+    //         return false;
+    //     }
+    // }
+
+    // verify() { //true if last line is hash of first line
+    //     return this.last === CryptoJS.SHA256(this.first).toString(this.encoding);
+    // }
+
+    _reset() {
+        // this.raw = this.backup;
+        this.first = null;
+        this.last = null;
+        this.entries = null;
+    }
+}
+
 function runTestCases(){
-    let testPassEntryString = "Fb[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
-    let testPassEntryString1 = "[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
-    let testPassEntryString2 = "0[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
+    let testPassEntryString = "Fb[|]website[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
+    let testPassEntryString1 = "[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
+    let testPassEntryString2 = "0[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
 
     let testPassEntry = new PassEntry();
 
@@ -245,10 +321,10 @@ function runTestCases(){
 
     let testPassManager = new PassManager();
 
-    testPassManager.entries = testPassManager.entriesFromString(testPassEntryString);
+    testPassManager.entries = testPassManager.entriesFromStrings([testPassEntryString]);
     if(testPassManager.entriesToString() !== testPassEntryString) throw new Error ("Something is wrong with PassManager string conversion");
 
-    testPassManager.entries = testPassManager.entriesFromString(testPassEntryString1);
+    testPassManager.entries = testPassManager.entriesFromStrings([testPassEntryString1]);
     if(testPassManager.entriesToString() !== testPassEntryString2) throw new Error ("Something is wrong with PassManager string conversion – uniquelyIdentifyEntries");
 
     console.log("All tests passed");
