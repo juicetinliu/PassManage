@@ -4,7 +4,8 @@
 const PassConfig = {
     PassEntryValueSeparator: "[|]",
     PassEntryArraySeparator: "[*]",
-    PassEntrySeparator: "\n"
+    PassEntrySeparator: "\n",
+    SHA256ToStringEncoding: CryptoJS.enc.Base64
 };
 
 class PassEntry {
@@ -117,7 +118,6 @@ class PassEntry {
 
 class PassManager {
     constructor(config = PassConfig) {
-        this.encoding = CryptoJS.enc.Base64;
         this.masterPasswordHash = null;
         this.deviceSecretHash = null;
         this.entries = [];
@@ -127,11 +127,11 @@ class PassManager {
     }
 
     saveMasterPasswordToHash(masterPassword) {
-        this.masterPasswordHash = CryptoJS.SHA256(masterPassword).toString(this.encoding);
+        this.masterPasswordHash = CryptoJS.SHA256(masterPassword).toString(this.config.SHA256ToStringEncoding);
     }
 
     saveDeviceSecretToHash(deviceSecret) {
-        this.deviceSecretHash = CryptoJS.SHA256(deviceSecret).toString(this.encoding);
+        this.deviceSecretHash = CryptoJS.SHA256(deviceSecret).toString(this.config.SHA256ToStringEncoding);
     }
 
     _generateMasterKey() {
@@ -243,17 +243,22 @@ class AESHandler extends PassHandler {
 
 
 
-class PassFile {
+class PassFile { //encrypt/decrypt with master password ^
     constructor(raw, config = PassConfig) {
         this.config = config;
 
         this.raw = raw;
+        this._rawOriginal = raw; //untouched
 
         this.first = null;
         this.last = null;
         this.entries = null;
 
-        this.processFile();
+        try{ //only processing if unencrypted
+            this.processFile();
+        } catch {
+            //do nothing
+        }
     }
 
     getFirst() {
@@ -263,6 +268,14 @@ class PassFile {
     getEntries() {
         return this.entries;
     }
+    
+    getRaw() {
+        return this.raw;
+    }
+
+    setRaw(raw) {
+        this.raw = raw;
+    }
 
     processFile() {
         let fsplit = this.raw.split(this.config.PassEntrySeparator);
@@ -271,6 +284,17 @@ class PassFile {
         this.first = fsplit.shift();
         this.last = fsplit.pop();
         this.entries = fsplit;
+
+        if(this.verify()){
+            return true;
+        } else {
+            this._reset();
+            return false;
+        }
+    }
+
+    verify() {
+        return this.last === CryptoJS.SHA256(this.first).toString(this.config.SHA256ToStringEncoding);
     }
 
     _reset() {

@@ -20,7 +20,10 @@
   <div id="main">
     <div id="main-panel" class="p p-out p-round">
       <div id="main-content" class="h hv-c vh-c">
-        <div id="login">
+        <div id="main-page">
+          MAIN CONTENT
+        </div>
+        <div id="login-page">
           <div id="login-content" class="h hv-c vh-c">
             <input id="input-password" type="password" name="input-password" class="text-input">
             <button id="submit-user-password" class="butt butt-main">
@@ -30,13 +33,37 @@
             </button>
           </div>
         </div>
-        <div id="drop" style="display:none">
-          <div id="drop-zone" class="p p-in p-round v hv-c vh-c">
-            <div>Click or Drag file</div>
-            <span class="material-symbols-rounded">
-              upload
-            </span>
-            <input id="input-password-file" type="file" name="input-password-file" title="ha"/>
+        <div id="drop-page">
+          <div id="drop-panel" class="p p-in p-round h hv-c vh-c">
+            <div id="drop-zone" class="v hv-l vh-c">
+              <div id="drop-zone-title" class="drop-panel-text-padding">
+                Click or Drag .txt file
+              </div>
+              <span class="material-symbols-rounded">
+                upload
+              </span>
+              <input id="input-password-file" type="file" name="input-password-file" title="ha"/>
+            </div>
+            <div id="confirm-password-file-content" class="v hv-l vh-c">
+              <div id="password-file-title" class="drop-panel-text-padding"></div>
+              <div id="confirm-password-file-buttons" class="h hc-c vh-c">
+                <button id="cancel-password-file-button" class="butt butt-main">
+                  <span class="material-symbols-rounded">
+                    close
+                  </span>
+                </button>
+                <button id="confirm-password-file-button" class="butt butt-main">
+                  <span class="material-symbols-rounded">
+                    done
+                  </span>
+                </button>
+              </div>
+              <button id="confirm-password-file-error-button" class="butt butt-main hide">
+                <span class="material-symbols-rounded">
+                  arrow_back
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

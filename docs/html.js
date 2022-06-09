@@ -8,6 +8,8 @@ class Element {
     constructor(type, label) {
         this.type = this.getType(type);
         this.label = label;
+
+        this.HIDE_CLASS = "hide";
     }
 
     getType(type) {
@@ -37,6 +39,14 @@ class Element {
             this.getElement().addEventListener(e, func);
         })
     }
+
+    hide() {
+        this.getElement().classList.add(this.HIDE_CLASS);
+    }
+
+    show() {
+        this.getElement().classList.remove(this.HIDE_CLASS);
+    }
 }
 
 const CurrentPage = {
@@ -45,23 +55,36 @@ const CurrentPage = {
 
 class App {
     //upload file
-    //login 
-    //see entries
+    //login or skip 
+    //see entries - with key (if logged in) – or option to login
     constructor() {
         this.p = new PassManager();
 
         this.mainPanel = new Element("id", "main-panel");
         
+        this.dropPage = new Element("id", "drop-page");
         this.inputPasswordFile = new Element("id", "input-password-file");
+        this.dropPanel = new Element("id", "drop-panel");
         this.dropZone = new Element("id", "drop-zone");
+        
+        this.confirmPassFileContent = new Element("id", "confirm-password-file-content");
+        this.passFileTitle = new Element("id", "password-file-title");
+        this.confirmPasswordFileButtons = new Element("id","confirm-password-file-buttons");
+        this.confirmPasswordFileErrorButton = new Element("id","confirm-password-file-error-button");
+        this.cancelPassFileButton = new Element("id", "cancel-password-file-button");
+        this.confirmPassFileButton = new Element("id", "confirm-password-file-button"); 
 
+        this.loginPage = new Element("id", "login-page");
         this.inputUsername = new Element("id", "input-user");
         this.inputPassword = new Element("id", "input-password");
         this.submitUserPasswordButton = new Element("id", "submit-user-password");
 
-        this.TEXT_INPUT_ERROR_CLASS = "text-input-error";
-        this.DROP_ZONE_ACTIVE_CLASS = "drop-zone-active"; 
-        this.DROP_ZONE_HOVER_CLASS = "drop-zone-hover"; 
+        this.mainPage = new Element("id", "main-page");
+
+        this.DROP_ZONE_ACTIVE_CLASS = "drop-panel-active"; 
+        this.DROP_ZONE_HOVER_CLASS = "drop-panel-hover"; 
+
+        this.pages = [this.dropPage, this.loginPage, this.mainPage];
 
         this.rawPassFile = null;
         this.passFile = null;
@@ -81,14 +104,14 @@ class App {
 
         this.dropZone.addEventListener(['drop'], 
             function(event) {
-                this._setDropZoneClass(true);
+                this._setDropPanelClass(true);
                 this._dropZoneDropHandler(event);
             }.bind(this));
 
         this.dropZone.addEventListener(['dragenter'], 
             function(event) {
                 console.log("DRAGGING");
-                this._setDropZoneClass(false, true);
+                this._setDropPanelClass(false, true);
                 this._dropZoneDragOverHandler(event);
             }.bind(this));
                     
@@ -96,20 +119,34 @@ class App {
             function(event) {
                 let files = event.target.files;
                 if (files.length !== 1) throw new Error("Only one file is required");
-            
+
                 this.rawPassFile = files[0];
+                this._confirmRawPassFile();
             }.bind(this));
 
         this.inputPasswordFile.addEventListener(['mousedown', 'focus', 'focusin'], 
             function() {
-                this._setDropZoneClass(true);
+                this._setDropPanelClass(true);
+            }.bind(this));
+
+        this.inputPasswordFile.addEventListener(['mouseover', 'mousein'], 
+            function() {
+                this._setDropPanelClass(false, true);
             }.bind(this));
 
         this.inputPasswordFile.addEventListener(['mouseup', 'mouseout', 'focusout', 'dragleave'], 
             function() {
-                this._setDropZoneClass(false);
+                this._setDropPanelClass(false);
             }.bind(this));
 
+        this.inputPassword.addEventListener(['input'],
+            function() {
+                if(this.inputPassword.getElement().value) {
+                    this.submitUserPasswordButton.show();
+                }else{
+                    this.submitUserPasswordButton.hide();
+                }
+            }.bind(this));
         
         this.submitUserPasswordButton.addEventListener(['click'],
             function() {
@@ -117,16 +154,64 @@ class App {
 
                 this.p.saveMasterPasswordToHash(pw);
                 this.inputPassword.getElement().value = "";
+
+                this.showMainPage();
             }.bind(this));
+
+        this.cancelPassFileButton.addEventListener(['click'], 
+            function() {
+                this.showFileDropPage();
+            }.bind(this));
+
+        this.confirmPasswordFileErrorButton.addEventListener(['click'],
+            function() {
+                this.showFileDropPage();
+            }.bind(this));
+
+        this.confirmPassFileButton.addEventListener(['click'], 
+            function() {
+                console.log("sending");
+                this.showLoginPage();
+            }.bind(this));
+
+        this.showFileDropPage();
     }
 
-    fileDropPage() {
+    showFileDropPage(fileDrop = true) {
+        this.pages.forEach(p => p.hide());
+        this.dropPage.show();
+        if(fileDrop) {
+            this.rawPassFile = null;
+            this.passFileTitle.getElement().innerHTML = "";
+
+            this.dropZone.show();
+            this.confirmPassFileContent.hide();
+        } else { //confirm password file subpage
+            this.dropZone.hide();
+            this.confirmPassFileContent.show();
+        }
+        this._fileDropPasswordFileButtons();
     }
 
-    loginPage() {
+    _fileDropPasswordFileButtons(error = false) {
+        if(error) {
+            this.confirmPasswordFileButtons.hide();
+            this.confirmPasswordFileErrorButton.show();
+        } else {
+            this.confirmPasswordFileButtons.show();
+            this.confirmPasswordFileErrorButton.hide();
+        }
     }
 
-    mainPage() {
+    showLoginPage() {
+        this.pages.forEach(p => p.hide());
+        this.loginPage.show();
+        this.submitUserPasswordButton.hide();
+    }
+
+    showMainPage() {
+        this.pages.forEach(p => p.hide());
+        this.mainPage.show();
     }
 
     _sendPassFileToPassManager() {
@@ -138,24 +223,46 @@ class App {
         
         fr.onload = function() {
             this.passFile = new PassFile(fr.result);
-            this.p.saveDeviceSecretToHash(this.passFile.getFirst());
-            this.p.setEntries(this.p.entriesFromStrings(this.passFile.getEntries()));
+            // this.p.saveDeviceSecretToHash(this.passFile.getFirst());
+            // this.p.setEntries(this.p.entriesFromStrings(this.passFile.getEntries()));
         }.bind(this);
     }
 
-    _setDropZoneClass(active, hover = false) {
-        let dropZone = this.dropZone.getElement();
+    _confirmRawPassFile() {
+        this.showFileDropPage(false);
+
+        if(!this.rawPassFile) {
+            this._rawPassFileError("Error uploading file. Try again.");
+            return;
+        }
+
+        if(!this.rawPassFile.name.endsWith(".txt")) {
+            this._rawPassFileError("File must be a .txt file");
+            return;
+        }
+
+        this.passFileTitle.getElement().innerHTML = this.rawPassFile.name;
+    }
+
+    _rawPassFileError(errorMessage) {
+        this._fileDropPasswordFileButtons(true);
+
+        this.passFileTitle.getElement().innerHTML = errorMessage;
+    }
+
+    _setDropPanelClass(active, hover = false) {
+        let dropPanel = this.dropPanel.getElement();
         
         if(active) {
-            dropZone.classList.add(this.DROP_ZONE_ACTIVE_CLASS);
+            dropPanel.classList.add(this.DROP_ZONE_ACTIVE_CLASS);
         } else {
-            dropZone.classList.remove(this.DROP_ZONE_ACTIVE_CLASS);
+            dropPanel.classList.remove(this.DROP_ZONE_ACTIVE_CLASS);
         }
 
         if(hover) {
-            dropZone.classList.add(this.DROP_ZONE_HOVER_CLASS);
+            dropPanel.classList.add(this.DROP_ZONE_HOVER_CLASS);
         } else {
-            dropZone.classList.remove(this.DROP_ZONE_HOVER_CLASS);
+            dropPanel.classList.remove(this.DROP_ZONE_HOVER_CLASS);
         }
     }
 
@@ -163,15 +270,17 @@ class App {
         event.preventDefault();
 
         if (event.dataTransfer.items) {
-            if (event.dataTransfer.items.length !== 1) throw new Error("Only one file is required");
+            if (event.dataTransfer.items.length !== 1) throw new Error("One file is required");
 
             if (event.dataTransfer.items[0].kind === 'file') {
                 this.rawPassFile = event.dataTransfer.items[0].getAsFile();
+                this._confirmRawPassFile();
             }
         } else {
-            if (event.dataTransfer.files.length !== 1) throw new Error("Only one file is required");
+            if (event.dataTransfer.files.length !== 1) throw new Error("One file is required");
 
             this.rawPassFile = event.dataTransfer.files[0];
+            this._confirmRawPassFile();
         }
     }
 
