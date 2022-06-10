@@ -1,3 +1,10 @@
+:root {
+    --background-blue: #d4e3ee;
+    --highlight-blue: #bae2ff;
+    --action-blue: #6db8ed;
+    --not-too-white: #f0f0f0;
+}
+
 * {
     font-family: Calibri, 'Trebuchet MS', sans-serif;
     font-size: 16px;
@@ -21,13 +28,13 @@ body {
 }
 
 .text-input {
-    border: 5px solid #bae2ff;
+    border: 5px solid var(--highlight-blue);
     border-radius: 5px;
     margin: 15px;
 }
 
 .text-input:hover {
-    border-color: #6db8ed;;
+    border-color: var(--action-blue);
 }
 
 .v {
@@ -100,12 +107,12 @@ body {
 }
 
 .butt-main {
-    background-color: #bae2ff;
+    background-color: var(--highlight-blue);
 }
 
 
 .butt-main:hover {
-    background-color: #6db8ed;
+    background-color: var(--action-blue);
 }
   
 .butt:active {
@@ -127,8 +134,8 @@ body {
 }
 
 #drop-panel {
-    border: 5px solid #bae2ff;
-    background-color: #d4e3ee;
+    border: 5px solid var(--highlight-blue);
+    background-color: var(--background-blue);
     width:  250px;
     height: 150px;
     position: relative;
@@ -139,14 +146,69 @@ body {
 }
 
 .drop-panel-hover {
-    border: 5px dashed  #6db8ed !important;
+    border: 5px dashed var(--action-blue) !important;
 }
 
 .drop-panel-active {
-    border: 5px solid #6db8ed !important;
+    border: 5px solid var(--action-blue) !important;
 }
 
 .drop-panel-text-padding {
     margin-top: 50px;
 }
 
+#main-content {
+    overflow-y: auto;
+    background-color: var(--not-too-white);
+}
+
+#main-table {
+}
+
+.entry-table {
+    flex-wrap: nowrap;
+    gap: 15px;
+}
+
+.divider {
+    width: 100%;
+    border-bottom: 1px dashed var(--action-blue);
+}
+
+.header-row {
+    font-weight: bold;
+}
+
+.header-divider {
+    border-bottom: 3px solid var(--action-blue);
+}
+
+.entry-row {
+    gap: 20px;
+    flex-wrap: nowrap;
+}
+
+.entry-col {
+    overflow: hidden;
+    flex-grow: 1;
+    width: 10px; /*needed to calculate grow spacing*/
+}
+
+/* custom scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    border-radius: 5px;
+    background: var(--background-blue);
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    background: var(--action-blue);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--highlight-blue);
+}

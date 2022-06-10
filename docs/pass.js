@@ -23,6 +23,20 @@ class PassEntry {
         this.config = config;
     }
 
+    enumerateFields() {
+        return {
+            Tag: this.tag, 
+            Website: this.website, 
+            Username: this.username, 
+            Email: this.email, 
+            AltEmail: this.altEmail, 
+            Password: this.password, 
+            Secrets: this.secrets, 
+            Hints: this.hints, 
+            Comments: this.comments
+        };
+    }
+
     setTag(tag) {
         if(tag) {
             this.tag = tag;
@@ -99,7 +113,7 @@ class PassEntry {
     fromString(str) {
         let values = str.split(this.config.PassEntryValueSeparator);
         
-        if(values.length != 9) throw new Error('Not enough fields to reconstruct PassEntry from string');
+        if(values.length != 9) throw new Error("Not enough fields to reconstruct PassEntry from string");
 
         let out = new PassEntry();
         out.setTag(values[0]);
@@ -135,8 +149,8 @@ class PassManager {
     }
 
     _generateMasterKey() {
-        if(!this.masterPasswordHash) throw new Error('Missing master password hash');
-        if(!this.deviceSecretHash) throw new Error('Missing device secret hash');
+        if(!this.masterPasswordHash) throw new Error("Missing master password hash");
+        if(!this.deviceSecretHash) throw new Error("Missing device secret hash");
 
         return CryptoJS.PBKDF2(this.masterPasswordHash, this.saltyHash, {
             keySize: 32,
@@ -192,6 +206,10 @@ class PassManager {
         this.entries = entries;
     }
 
+    getEntries() {
+        return this.entries;
+    }
+
     entriesToString() {
         this._uniquelyIdentifyEntries();
         let entryStrings = [];
@@ -243,9 +261,10 @@ class AESHandler extends PassHandler {
 
 
 
-class PassFile { //encrypt/decrypt with master password ^
+class PassFile { //encrypt/decrypt with appToken
     constructor(raw, config = PassConfig) {
         this.config = config;
+        this.passHandler = new AESHandler();
 
         this.raw = raw;
         this._rawOriginal = raw; //untouched
@@ -254,15 +273,17 @@ class PassFile { //encrypt/decrypt with master password ^
         this.last = null;
         this.entries = null;
 
+        this.processed = false;
+
         try{ //only processing if unencrypted
             this.processFile();
-        } catch {
-            //do nothing
+        } catch(e) {
+            // console.log("Something went wrong just processing this Passfile. Maybe try decrypting it?");
         }
     }
 
-    getFirst() {
-        return this.first;
+    getLast() {
+        return this.last;
     }
 
     getEntries() {
@@ -277,21 +298,41 @@ class PassFile { //encrypt/decrypt with master password ^
         this.raw = raw;
     }
 
+    decryptFileAndProcess(key) {
+        if(!key) throw new Error("key needed to decrypt this PassFile");
+
+        this.raw = this.passHandler.decryptToString(this.raw, key);
+
+        this.processFile();
+    }
+
     processFile() {
         let fsplit = this.raw.split(this.config.PassEntrySeparator);
         if(fsplit.length < 2) throw new Error("PassFile needs at least 2 lines");
-
+        
         this.first = fsplit.shift();
         this.last = fsplit.pop();
         this.entries = fsplit;
 
         if(this.verify()){
+            this.processed = true;
             return true;
         } else {
             this._reset();
-            return false;
+            throw new Error("Something went wrong with verifying this PassFile");
         }
     }
+
+    encryptFile(key) {
+        if(!key) throw new Error("key needed to encrypt this PassFile");
+
+        return this.passHandler.encryptToString(this.raw, key);
+    }
+
+    isProcessed() {
+        return this.processed;
+    }
+
 
     verify() {
         return this.last === CryptoJS.SHA256(this.first).toString(this.config.SHA256ToStringEncoding);
@@ -301,6 +342,8 @@ class PassFile { //encrypt/decrypt with master password ^
         this.first = null;
         this.last = null;
         this.entries = null;
+        this.raw = this._rawOriginal;
+        this.processed = false;
     }
 }
 
