@@ -9,62 +9,89 @@
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.js"></script>
 
   <script language="javascript" type="text/javascript" src="pass.js"></script>
-  <script language="javascript" type="text/javascript" src="html.js"></script>
+  <script language="javascript" type="text/javascript" src="components.js"></script>
+  <script language="javascript" type="text/javascript" src="pages.js"></script>
+  <script language="javascript" type="text/javascript" src="app.js"></script>
   <script language="javascript" type="text/javascript" src="docs.js"></script>
 
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,600,0,200" />
 </head>
 
-<body>
-  <div id="main">
-    <div id="main-panel" class="p p-out p-round hide">
-      <div id="all-content" class="h hv-c vh-c">
-        <div id="main-page">
-          <div id="main-content" class="p p-round">
-            <!-- generated content -->
-          </div>
+<body class="light-mode">
+  <div id="main" class="h hv-c vh-c">
+    <div class="v hv-c vh-c">
+      <div id="main-page-options" class="h hv-l vh-c">
+        <div id="main-page-option-search" class="p p-out p-round">
+          <span id="input-search-icon" class="material-symbols-rounded">
+            search
+          </span>
+          <input id="input-search" type="text" name="input-search" class="text-input" >
         </div>
-        <div id="login-page">
-          <div id="login-content" class="h hv-c vh-c">
-            <input id="input-password" type="password" name="input-password" class="text-input">
-            <button id="submit-user-password" class="butt butt-main">
-              <span class="material-symbols-rounded">
-                arrow_forward
-              </span>
-            </button>
-          </div>
+        <div id="main-page-option-edit">
+          <button id="main-page-option-download-button" class="butt butt-main">
+            <span class="material-symbols-rounded">
+              edit_note
+            </span>
+          </button>
         </div>
-        <div id="drop-page">
-          <div id="drop-panel" class="p p-in p-round h hv-c vh-c">
-            <div id="drop-zone" class="v hv-l vh-c">
-              <div id="drop-zone-title" class="drop-panel-text-padding">
-                Click or Drag .txt file
-              </div>
-              <span class="material-symbols-rounded">
-                upload
-              </span>
-              <input id="input-password-file" type="file" name="input-password-file" title="ha"/>
+        <div id="main-page-option-download">
+          <button id="main-page-option-download-button" class="butt butt-main">
+            <span class="material-symbols-rounded">
+              download
+            </span>
+          </button>
+        </div>
+      </div>
+      <div id="main-panel" class="p p-out p-round hide">
+        <div id="all-content" class="h hv-c vh-c">
+          <div id="main-page">
+            
+            <div id="main-content" class="p p-round">
+              <!-- generated content -->
             </div>
-            <div id="confirm-password-file-content" class="v hv-l vh-c">
-              <div id="password-file-title" class="drop-panel-text-padding"></div>
-              <div id="confirm-password-file-buttons" class="h hc-c vh-c">
-                <button id="cancel-password-file-button" class="butt butt-main">
-                  <span class="material-symbols-rounded">
-                    close
-                  </span>
-                </button>
-                <button id="confirm-password-file-button" class="butt butt-main">
-                  <span class="material-symbols-rounded">
-                    done
-                  </span>
-                </button>
-              </div>
-              <button id="confirm-password-file-error-button" class="butt butt-main hide">
+          </div>
+          <div id="login-page">
+            <div id="login-content" class="h hv-c vh-c">
+              <input id="input-password" type="password" name="input-password" class="text-input">
+              <button id="submit-user-password" class="butt butt-main">
                 <span class="material-symbols-rounded">
-                  arrow_back
+                  arrow_forward
                 </span>
               </button>
+            </div>
+          </div>
+          <div id="drop-page">
+            <div id="drop-panel" class="p p-in p-round h hv-c vh-c">
+              <div id="drop-zone" class="v hv-l vh-c">
+                <div id="drop-zone-title" class="drop-panel-text-padding">
+                  Click or Drag .txt file
+                </div>
+                <span class="material-symbols-rounded">
+                  upload
+                </span>
+                <input id="input-password-file" type="file" name="input-password-file" title="ha"/>
+              </div>
+              <div id="confirm-password-file-content" class="v hv-l vh-c">
+                <div id="password-file-title" class="drop-panel-text-padding"></div>
+                <div id="confirm-password-file-buttons" class="h hc-c vh-c">
+                  <button id="cancel-password-file-button" class="butt butt-main">
+                    <span class="material-symbols-rounded">
+                      close
+                    </span>
+                  </button>
+                  <button id="confirm-password-file-button" class="butt butt-main">
+                    <span class="material-symbols-rounded">
+                      done
+                    </span>
+                  </button>
+                </div>
+                <button id="confirm-password-file-error-button" class="butt butt-main hide">
+                  <span class="material-symbols-rounded">
+                    arrow_back
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

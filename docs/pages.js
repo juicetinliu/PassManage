@@ -1,54 +1,3 @@
-const HtmlTypes = {
-    CLASS: "CLASS",
-    ID: "ID",
-    ERROR: "ERROR",
-};
-
-class Element {
-    constructor(type, label) {
-        this.type = this.getType(type);
-        this.label = label;
-
-        this.HIDE_CLASS = "hide";
-    }
-
-    getType(type) {
-        if(type === "class") {
-            return HtmlTypes.CLASS;
-        } else if(type === "id") {
-            return HtmlTypes.ID;
-        } else {
-            return HtmlTypes.ERROR;
-        }
-    }
-
-    getElement() {
-        if(this.type === HtmlTypes.CLASS) {
-            return document.getElementsByClassName(this.label);
-        } else if(this.type === HtmlTypes.ID) {
-            return document.getElementById(this.label);
-        } else {
-            throw new Error("No element found");
-        }
-    }
-
-    addEventListener(events, func) {
-        if(!Array.isArray(events)) throw new Error("events should be an Array");
-
-        events.forEach(e => {
-            this.getElement().addEventListener(e, func);
-        })
-    }
-
-    hide() {
-        this.getElement().classList.add(this.HIDE_CLASS);
-    }
-
-    show() {
-        this.getElement().classList.remove(this.HIDE_CLASS);
-    }
-}
-
 class Page { 
     constructor(elementId, app) {
         this.page = new Element("id", elementId);
@@ -75,6 +24,9 @@ class Page {
 class MainPage extends Page {
     constructor(app) {
         super("main-page", app);
+
+        this.mainOptionsBarComponent = new MainOptionsBar(app);
+
         this.created = false;
 
         this.mainContent = new Element("id", "main-content");
@@ -104,13 +56,20 @@ class MainPage extends Page {
 
     show() {
         if(!this.created) this.create();
+        
         super.show();
+        this.mainOptionsBarComponent.show();
+    }
+
+    hide() {
+        this.mainOptionsBarComponent.hide();
+        super.hide();
     }
 
     create() {
-        let entries = this.app.getPassManagerEntries();
-        // let testEntryStrings = ['Fb[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here'];
-        // let entries = this.app.passManager.entriesFromStrings(testEntryStrings);
+        // let entries = this.app.getPassManagerEntries();
+        let testEntryStrings = ['Fb[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
+        let entries = this.app.passManager.entriesFromStrings(testEntryStrings);
 
         this.createTable(entries);
 
@@ -382,114 +341,3 @@ class DropPage extends Page {
         this.app.extractRawPassFile();
     }
 }
-
-class App {
-    //upload file
-    //login or skip 
-    //see entries - with key (if logged in) – or option to login
-    constructor() {
-        this.passManager = new PassManager();
-
-        this.appToken = "password";
-
-        this.mainPanel = new Element("id", "main-panel");
-
-        this.pages = {
-            DropPage: new DropPage(this), 
-            LoginPage: new LoginPage(this), 
-            MainPage: new MainPage(this)
-        };
-
-        Object.values(this.pages).forEach(p => p.setAppPages(this.pages));
-
-        this.rawPassFile = null;
-        this.passFile = null;
-
-        this.PROCESS_DELAY_MS = 1000;
-    }
-
-    run() {
-        window.addEventListener("load", function() {
-            this.setup();
-            this.mainPanel.show();
-        }.bind(this));
-    }
-
-    setup(){
-        let mainPanel = this.mainPanel.getElement();
-        
-        // mainPanel.style.maxWidth = is_mobile_or_tablet_view() ? "80vw" : "800px";
-        // mainPanel.style.maxHeight = is_mobile_or_tablet_view() ? "60vw" : "600px";
-
-        Object.values(this.pages).forEach(p => p.setup());
-
-        this.pages.DropPage.show();
-        // this.pages.MainPage.show();
-    }
-
-    getPassManagerEntries() {
-        return this.passManager.getEntries();
-    }
-
-    hideAllPages() {
-        Object.values(this.pages).forEach(p => p.hide());
-    }
-
-    savePasswordToPassManager(pw) {
-        this.hideAllPages();
-
-        setTimeout(function() {
-            this.passManager.saveMasterPasswordToHash(pw);
-
-            this.pages.MainPage.show();
-        }.bind(this), this.PROCESS_DELAY_MS);
-    }
-
-    extractRawPassFile() {
-        this.hideAllPages();
-
-        if(!this.rawPassFile) throw new Error("no rawPassFile found");
-
-        let fr = new FileReader();
-        
-        fr.readAsText(this.rawPassFile);
-        
-        fr.onload = function() {
-            setTimeout(function() {
-                let passFile = new PassFile(fr.result);
-
-                if(!passFile.isProcessed()) {
-                    try {
-                        passFile.decryptFileAndProcess(this.appToken);
-                    } catch (e) {
-                        console.log("Something went wrong with decrypting passFile")
-                        console.log(e);
-                        this.rawPassFile = null;
-                        this.pages.DropPage.show(); //go back to drop page;
-                        return;
-                    }
-                }
-
-                this.passFile = passFile;
-
-                this.passManager.saveDeviceSecretToHash(this.passFile.getLast());
-                this.passManager.setEntries(this.passManager.entriesFromStrings(this.passFile.getEntries()));
-
-                this.pages.LoginPage.show();
-            }.bind(this), this.PROCESS_DELAY_MS);
-        }.bind(this);
-    }
-
-    setRawPassFile(rawPassFile){
-        this.rawPassFile = rawPassFile;
-    }
-
-    getRawPassFile() {
-        return this.rawPassFile;
-    }
-}
-
-//https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
-//https://stackoverflow.com/questions/7060750/detect-the-enter-key-in-a-text-input-field
-//https://robkendal.co.uk/blog/2020-04-17-saving-text-to-client-side-file-using-vanilla-js
-// https://stackoverflow.com/questions/256754/how-to-pass-arguments-to-addeventlistener-listener-function

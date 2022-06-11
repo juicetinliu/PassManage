@@ -1,8 +1,4 @@
 :root {
-    --background-blue: #d4e3ee;
-    --highlight-blue: #bae2ff;
-    --action-blue: #6db8ed;
-    --not-too-white: #f0f0f0;
 }
 
 * {
@@ -10,11 +6,34 @@
     font-size: 16px;
 }
 
+.dark-mode {
+    --background-blue: #3c4952;
+    --highlight-blue: #6db8ed;
+    --action-blue: #bae2ff;
+    --not-too-white: #545454;
+    --background-white: #292929;
+    --text-color: #fafafa;
+    --light-shadow: rgba(6, 6, 6, 0.5);
+    --dark-shadow: rgba(70, 70, 70, 0.513);
+}
+
+.light-mode {
+    --background-blue: #d4e3ee;
+    --highlight-blue: #bae2ff;
+    --action-blue: #6db8ed;
+    --not-too-white: #fafafa;
+    --background-white: #e5e5e5;
+    --text-color: #000000;
+    --light-shadow: rgba(255,255,255,0.5);
+    --dark-shadow: rgba(70,70,70,0.12);
+}
+
 html, body {
     display: flex;
     width: 100%;
     height: 100%;
-    background-color: #e5e5e5;
+    background-color: var(--background-white);
+    color: var(--text-color);
 }
   
 body {
@@ -27,10 +46,15 @@ body {
     overflow: hidden;
 }
 
+.material-symbols-rounded {
+    color: var(--text-color);
+}
+
 .text-input {
     border: 5px solid var(--highlight-blue);
     border-radius: 5px;
-    margin: 15px;
+    background-color: var(--not-too-white);
+    color: var(--text-color);
 }
 
 .text-input:hover {
@@ -81,11 +105,11 @@ body {
 }
   
 .p-out {
-    box-shadow: -10px -10px 15px rgba(255,255,255,0.5), 10px 10px 15px rgba(100,70,70,0.12);
+    box-shadow: -10px -10px 15px var(--light-shadow), 10px 10px 15px var(--dark-shadow);
 }
   
 .p-in {
-    box-shadow: inset -10px -10px 15px rgba(255,255,255,0.5), inset 10px 10px 15px rgba(100,70,70,0.12);
+    box-shadow: inset -10px -10px 15px var(--light-shadow), inset 10px 10px 15px var(--dark-shadow);
 }
   
 .p-round {
@@ -95,7 +119,7 @@ body {
   
 .butt {
     cursor: pointer;
-    box-shadow: -10px -10px 15px rgba(255,255,255,0.5), 10px 10px 15px rgba(100,70,70,0.12);
+    box-shadow: -10px -10px 15px var(--light-shadow), 10px 10px 15px var(--dark-shadow);
     border-radius: 15px;
     display: flex;
     justify-content: center;
@@ -116,7 +140,7 @@ body {
 }
   
 .butt:active {
-    box-shadow: inset -10px -10px 15px rgba(255,255,255,0.5), inset 10px 10px 15px rgba(70,70,70,0.12);
+    box-shadow: inset -10px -10px 15px var(--light-shadow), inset 10px 10px 15px var(--dark-shadow);
 }
   
 .hide {
@@ -156,6 +180,30 @@ body {
 .drop-panel-text-padding {
     margin-top: 50px;
 }
+
+#main-page-options {
+    justify-content: space-between;
+}
+
+#input-search-icon {
+    position: absolute;
+    top: 18px;
+    left: 20px;
+}
+
+#main-page-option-search {
+    position: relative;
+}
+
+#main-page-option-edit {
+    margin-left: auto;
+}
+
+#main-page-option-download {
+    
+}
+
+
 
 #main-content {
     overflow-y: auto;
