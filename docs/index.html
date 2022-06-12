@@ -12,14 +12,13 @@
   <script language="javascript" type="text/javascript" src="components.js"></script>
   <script language="javascript" type="text/javascript" src="pages.js"></script>
   <script language="javascript" type="text/javascript" src="app.js"></script>
-  <script language="javascript" type="text/javascript" src="docs.js"></script>
 
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,600,0,200" />
 </head>
 
 <body class="light-mode">
-  <div id="main" class="h hv-c vh-c">
+  <div id="main" class="h hv-c vh-c hide">
     <div class="v hv-c vh-c">
       <div id="main-page-options" class="h hv-l vh-c">
         <div id="main-page-option-search" class="p p-out p-round">
@@ -29,7 +28,7 @@
           <input id="input-search" type="text" name="input-search" class="text-input" >
         </div>
         <div id="main-page-option-edit">
-          <button id="main-page-option-download-button" class="butt butt-main">
+          <button id="main-page-option-edit-button" class="butt butt-main">
             <span class="material-symbols-rounded">
               edit_note
             </span>
@@ -43,12 +42,17 @@
           </button>
         </div>
       </div>
-      <div id="main-panel" class="p p-out p-round hide">
+      <div id="main-panel" class="p p-out p-round">
         <div id="all-content" class="h hv-c vh-c">
+          <div id="edit-page">
+            <div id="edit-content" class="p p-round">
+              <!-- EditPage() generates content -->
+            </div>
+          </div>
           <div id="main-page">
             
             <div id="main-content" class="p p-round">
-              <!-- generated content -->
+              <!-- MainPage() generates content -->
             </div>
           </div>
           <div id="login-page">
@@ -99,4 +103,7 @@
     </div>
   </div>
 </body>
+
+<!-- run js after load to avoid using eventlistener onload – main view is hidden anyways while js setup runs -->
+<script language="javascript" type="text/javascript" src="docs.js"></script>
 </html>

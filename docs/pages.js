@@ -1,8 +1,11 @@
 class Page { 
     constructor(elementId, app) {
-        this.page = new Element("id", elementId);
+        this.pageElement = new Element("id", elementId);
         this.app = app;
         this.appPages = null;
+        this.components = {};
+
+        this.created = false;
     }
 
     setAppPages(pages) {
@@ -10,125 +13,136 @@ class Page {
     }
 
     show() {
+        if(!this.created) this.create();
         this.app.hideAllPages();
-        this.page.show();
+        this.pageElement.show();
     }
 
     hide() {
-        this.page.hide();
+        if(!this.created) this.create();
+        this.pageElement.hide();
     }
 
-    setup() {}
+    setup() {
+        if(!this.created) this.create();
+        Object.values(this.components).forEach(c => c.setup());
+    }
+
+    create() {
+        this.created = true;
+    }
+}
+
+class EditPage extends Page {
+    constructor(app) {
+        super("edit-page", app);
+
+        this.editContent = new Element("id", "edit-content");
+
+        this.components = {
+            editView: new EditView(app)
+        }
+
+        this.actionTypes = {
+            ADD: "add",
+            EDIT: "edit"
+        }
+
+        this.action = this.actionTypes.ADD; //ADD or EDIT
+    }
+    
+    setup() {
+        super.setup();
+        let editContent = this.editContent.getElement();
+        editContent.style.width = is_mobile_or_tablet_view() ? "60vw" : "800px";
+    }
+
+    setAction(action) {
+        if(action === this.actionTypes.ADD) {
+            this.action = this.actionTypes.ADD;
+        } else if (action === this.actionTypes.EDIT) {
+            this.action = this.actionTypes.EDIT;
+        } else {
+            console.log("invalid action " + action + "; defaulting to ADD");
+            this.action = this.actionTypes.ADD;
+        }
+    }
+
+    show() {
+        this.components.editView.clearInputs();
+        super.show()
+    }
+
+    create() {
+        super.create();
+        let view = this.components.editView.create();
+        this.editContent.appendChild(view);
+    }
+
+    confirmEditEntry(entry) {
+        if(this.action === this.actionTypes.ADD) {
+            this.app.addPassEntry(entry);
+        } else if (this.action === this.actionTypes.EDIT) {
+            // this.app.editPassEntry(entry);
+        } else {
+            throw new Error("Shouldn't reach this in confirmEntry()")
+        }
+    }
 }
 
 class MainPage extends Page {
     constructor(app) {
         super("main-page", app);
 
-        this.mainOptionsBarComponent = new MainOptionsBar(app);
-
-        this.created = false;
-
         this.mainContent = new Element("id", "main-content");
-        // this.mainTable = new Element("id", "main-table");
-        
-        this.MAIN_TABLE_ID = "main-table";
-        this.MAIN_ENTRY_ID_PREFIX = "main-entry-";
 
-        this.ENTRY_TABLE_CLASSES = "v hv-l vh-c entry-table".split(" ");
-        this.ENTRY_ROW_CLASSES = "h hv-c vh-c entry-row".split(" ");
-        this.ENTRY_COL_CLASS = "entry-col";
-        this.DIVIDER_CLASS = "divider";
-        this.HEADER_DIVIDER_CLASS = "header-divider";
-
-        this.headers = Object.keys(new PassEntry().enumerateFields());
-
-        this.HEADER_ROW_CLASS = "header-row";
+        this.components = {
+            mainOptionsBar: new MainOptionsBar(app),
+            mainSearchOption: new MainOptionsSearch(app),
+            mainDownloadButton: new MainOptionsDownload(app),
+            // include edit button
+            mainTable: new MainTable(app)
+        }
     }
 
     setup() {
+        super.setup();
         let mainContent = this.mainContent.getElement();
         
         mainContent.style.width = is_mobile_or_tablet_view() ? "60vw" : "800px";
-        mainContent.style.maxHeight = is_mobile_or_tablet_view() ? "60vh" : "600px";
-
     }
 
     show() {
-        if(!this.created) this.create();
-        
         super.show();
-        this.mainOptionsBarComponent.show();
+        this.updateMainTableEntries();
+        this.components.mainOptionsBar.show();
     }
 
     hide() {
-        this.mainOptionsBarComponent.hide();
+        this.components.mainOptionsBar.hide();
         super.hide();
     }
 
     create() {
-        // let entries = this.app.getPassManagerEntries();
-        let testEntryStrings = ['Fb[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
-        let entries = this.app.passManager.entriesFromStrings(testEntryStrings);
+        super.create();
+        // let testEntryStrings = ['Fb[|]website[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
+        // let e = this.app.passManager.entriesFromStrings(testEntryStrings);
+        // this.app.passManager.setEntries(e);
 
-        this.createTable(entries);
+        let entries = this.app.getPassManagerEntries();
 
-        this.created = true;
+        this.createMainTable(entries);
     }
 
-    createTable(entries) {
-        let mainTableElement = document.createElement("div");
-        mainTableElement.id = this.MAIN_TABLE_ID;
-        this.ENTRY_TABLE_CLASSES.forEach(c => mainTableElement.classList.add(c));
+    createMainTable(entries) {
+        let table = this.components.mainTable.create(entries);
 
-        // Create header row
-        let headerRowElement = document.createElement("div");
-        headerRowElement.id = this.MAIN_ENTRY_ID_PREFIX + this.HEADER_ROW_CLASS; //main-entry-header-row
-        this.ENTRY_ROW_CLASSES.forEach(c => headerRowElement.classList.add(c));
-        headerRowElement.classList.add(this.HEADER_ROW_CLASS);
+        this.mainContent.appendChild(table);
+    }
 
-        // Populate header row with headers
-        this.headers.forEach(header => {
-            let headerColElement = document.createElement("div");
-            headerColElement.id = this.MAIN_ENTRY_ID_PREFIX + "header-col-" + header; //Eg.main-entry-header-col-tag
-            headerColElement.classList.add(this.ENTRY_COL_CLASS);
-            headerColElement.innerHTML = header;
-            headerRowElement.appendChild(headerColElement);
-        })
-
-        mainTableElement.appendChild(headerRowElement);
-
-        // Create header divider
-        let headerDividerElement = document.createElement("div");
-        headerDividerElement.classList.add(this.DIVIDER_CLASS, this.HEADER_DIVIDER_CLASS);
-        mainTableElement.appendChild(headerDividerElement);
-
-        // Create entry rows
-        entries.forEach((entry, index) => {
-            if(index > 0) {
-                // Create header divider
-                let dividerElement = document.createElement("div");
-                dividerElement.classList.add(this.DIVIDER_CLASS);
-                mainTableElement.appendChild(dividerElement);
-            }
-
-            let entryRowElement = document.createElement("div");
-            entryRowElement.id = this.MAIN_ENTRY_ID_PREFIX + entry.getTag();
-            this.ENTRY_ROW_CLASSES.forEach(c => entryRowElement.classList.add(c));
-
-            // Populate entry rows with entry fields
-            Object.entries(entry.enumerateFields()).forEach(field => {
-                let entryColElement = document.createElement("div");
-                entryColElement.id = entry.getTag() + "-" + field[1]; //Eg. Google-Tag
-                entryColElement.classList.add(this.ENTRY_COL_CLASS);
-                entryColElement.innerHTML = field[1];
-                entryRowElement.appendChild(entryColElement);
-            })
-
-            mainTableElement.appendChild(entryRowElement);  
-        })
-
-        this.mainContent.getElement().appendChild(mainTableElement);  
+    updateMainTableEntries() {
+        let entries = this.app.getPassManagerEntries();
+        this.components.mainTable.updateEntries(entries);
     }
 }
 
@@ -142,22 +156,20 @@ class LoginPage extends Page {
     }
 
     setup() {
-        this.inputPassword.addEventListener(["input"],
-            function() {
-                if(this.inputPassword.getElement().value) {
-                    this.submitUserPasswordButton.show();
-                }else{
-                    this.submitUserPasswordButton.hide();
-                }
-            }.bind(this));
+        this.inputPassword.addEventListener(["input"], function() {
+            if(this.inputPassword.getElement().value) {
+                this.submitUserPasswordButton.show();
+            }else{
+                this.submitUserPasswordButton.hide();
+            }
+        }.bind(this));
         
-        this.submitUserPasswordButton.addEventListener(["click"],
-            function() {
-                let pw = this.inputPassword.getElement().value;
-                this.inputPassword.getElement().value = "";
+        this.submitUserPasswordButton.addEventListener(["click"], function() {
+            let pw = this.inputPassword.getElement().value;
+            this.inputPassword.getElement().value = "";
 
-                this._savePasswordToApp(pw);
-            }.bind(this));
+            this._savePasswordToApp(pw);
+        }.bind(this));
     }
 
     show() {
@@ -279,6 +291,7 @@ class DropPage extends Page {
         }
     }
 
+    //https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
     _dropZoneDropHandler(event) {
         event.preventDefault();
 

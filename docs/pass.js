@@ -20,21 +20,33 @@ class PassEntry {
         this.hints = [];
         this.comments = [];
 
+        this.unhashedPassword = "";
+        this.unhashedHints = [];
+
         this.config = config;
     }
 
-    enumerateFields() {
-        return {
-            Tag: this.tag, 
-            Website: this.website, 
-            Username: this.username, 
-            Email: this.email, 
-            AltEmail: this.altEmail, 
-            Password: this.password, 
-            Secrets: this.secrets, 
-            Hints: this.hints, 
-            Comments: this.comments
-        };
+    export(forTableView = true) {
+        if(forTableView) { //just return useful entries
+            return {
+                tag: this.tag,
+                website: this.website, 
+                username: this.username ? this.username : this.email,
+                password: this.password
+            };
+        } else { //return all entries for secondary view
+            return {
+                tag: this.tag, 
+                website: this.website, 
+                username: this.username, 
+                email: this.email, 
+                altEmail: this.altEmail, 
+                password: this.password, 
+                secrets: this.secrets, 
+                hints: this.hints, 
+                comments: this.comments
+            };
+        }
     }
 
     setTag(tag) {
@@ -128,67 +140,113 @@ class PassEntry {
 
         return out;
     }
+
+    destroyUnhashedData() {
+        this.unhashedPassword = "";
+        this.unhashedHints = [];
+    }
 }
 
 class PassManager {
-    constructor(config = PassConfig) {
+    constructor(app, config = PassConfig) {
         this.masterPasswordHash = null;
         this.deviceSecretHash = null;
+
+        this.fileSecret = null;
+        this.deviceSecret = null;
+
         this.entries = [];
         this.passHandler = new AESHandler();
-        
+
+        this.app = app;
+
         this.config = config;
+
+        this._generateSecrets(); //will be overwritten if passFile is uploaded
     }
 
     saveMasterPasswordToHash(masterPassword) {
         this.masterPasswordHash = CryptoJS.SHA256(masterPassword).toString(this.config.SHA256ToStringEncoding);
     }
 
-    saveDeviceSecretToHash(deviceSecret) {
-        this.deviceSecretHash = CryptoJS.SHA256(deviceSecret).toString(this.config.SHA256ToStringEncoding);
+    _generateSecrets() {
+        let set = "abcdefghijklmnopqrstuvwxyz0123456789";
+        let s = "";
+        for(let i = 0; i < 20; i++){
+            s += set[Math.floor(Math.random() * set.length)];
+        }
+        let fs = CryptoJS.SHA256(s).toString(this.config.SHA256ToStringEncoding);
+        let ds = CryptoJS.SHA256(fs).toString(this.config.SHA256ToStringEncoding)
+        this.saveSecrets(fs, ds);
+    }
+
+    saveSecrets(fileSecret, deviceSecret) {
+        this.fileSecret = fileSecret;
+        this.deviceSecret = deviceSecret;
+        this.deviceSecretHash = CryptoJS.SHA256(this.deviceSecret).toString(this.config.SHA256ToStringEncoding);
     }
 
     _generateMasterKey() {
         if(!this.masterPasswordHash) throw new Error("Missing master password hash");
         if(!this.deviceSecretHash) throw new Error("Missing device secret hash");
 
-        return CryptoJS.PBKDF2(this.masterPasswordHash, this.saltyHash, {
+        return CryptoJS.PBKDF2(this.masterPasswordHash, this.deviceSecretHash, {
             keySize: 32,
             iterations: 100000
         }).toString();
     }
 
-    addPassEntry(tag = "", website = "", username = "", email = "", altEmail = "", password = "", secrets = [], hints = [], comments = []) {
+    addPassEntry(input) {
         let masterKey = this._generateMasterKey();
-
+        
         let entry = new PassEntry();
-        entry.setTag(tag);
-        entry.setWebsite(website);
-        entry.setUsername(username);
-        entry.setEmail(email);
-        entry.setAltEmail(altEmail);
-        entry.setPassword(this.encryptString(password, masterKey)); //hashed
-        secrets.forEach(val => entry.addToSecrets(this.encryptString(val, masterKey))); //hashed
-        hints.forEach(val => entry.addToHints(val));
-        comments.forEach(val => entry.addToComments(val));
+        if(input.tag) entry.setTag(input.tag);
+        if(input.website) entry.setWebsite(input.website);
+        if(input.username) entry.setUsername(input.username);
+        if(input.email) entry.setEmail(input.email);
+        if(input.altEmail) entry.setAltEmail(input.altEmail);
+        if(input.password) entry.setPassword(this._encryptString(input.password, masterKey)); //hashed
+        if(Array.isArray(input.secrets)) input.secrets.forEach(val => entry.addToSecrets(this._encryptString(val, masterKey))); //hashed
+        if(Array.isArray(input.hints)) input.hints.forEach(val => entry.addToHints(val));
+        if(Array.isArray(input.comments)) input.comments.forEach(val => entry.addToComments(val));
         
         this.entries.push(entry);
         
         return true;
     }
 
-    encryptString(str, masterKey = "") {
+    _encryptString(str, masterKey = "") {
         if(!masterKey) {
             masterKey = this._generateMasterKey();
         }
         return this.passHandler.encryptToString(str, masterKey);
     }
 
-    decryptString(str, masterKey = "") {
+    _decryptString(str, masterKey = "") {
         if(!masterKey) {
             masterKey = this._generateMasterKey();
         }
         return this.passHandler.decryptToString(str, masterKey);
+    }
+
+    // decryptPassEntry(tag) {}
+
+    getPassFile(encrypt = false) {
+        let out = new PassFile();
+        out.setRawFromEntryStrings(
+            this.fileSecret,
+            this._entriesToString(),
+            this.deviceSecret,
+            encrypt,
+            this.app.appToken);
+        
+        return out;
+    }
+
+    destroyUnhashedData() {
+        this.entries.forEach(e => {
+            e.destroyUnhashedData();
+        })
     }
 
     entriesFromStrings(passEntryStrings) {
@@ -210,7 +268,7 @@ class PassManager {
         return this.entries;
     }
 
-    entriesToString() {
+    _entriesToString() {
         this._uniquelyIdentifyEntries();
         let entryStrings = [];
         this.entries.forEach(entry => {
@@ -223,7 +281,7 @@ class PassManager {
     _uniquelyIdentifyEntries() {
         this.entries.forEach((entry, index) => {
             if (!entry.getTag()) {
-                entry.setTag("" + index);
+                entry.setTag("Tag" + index);
             }
         });
     }
@@ -262,7 +320,7 @@ class AESHandler extends PassHandler {
 
 
 class PassFile { //encrypt/decrypt with appToken
-    constructor(raw, config = PassConfig) {
+    constructor(raw = "", config = PassConfig) {
         this.config = config;
         this.passHandler = new AESHandler();
 
@@ -271,9 +329,9 @@ class PassFile { //encrypt/decrypt with appToken
 
         this.first = null;
         this.last = null;
-        this.entries = null;
+        this.rawEntries = null;
 
-        this.processed = false;
+        this.encrypted = true;
 
         try{ //only processing if unencrypted
             this.processFile();
@@ -282,20 +340,37 @@ class PassFile { //encrypt/decrypt with appToken
         }
     }
 
+    getFirst() {
+        return this.first;
+    }
+
     getLast() {
         return this.last;
     }
 
-    getEntries() {
-        return this.entries;
+    getRawEntries() {
+        return this.rawEntries;
     }
     
     getRaw() {
         return this.raw;
     }
 
-    setRaw(raw) {
-        this.raw = raw;
+    setRawFromEntryStrings(fileSecret, entryStrings, deviceSecret, encrypt = false, appToken) {
+        this.rawEntries = entryStrings;
+        this.first = fileSecret;
+        this.last = deviceSecret;
+
+        if(entryStrings.length) {
+            this.raw = [this.first, this.rawEntries, this.last].join(this.config.PassEntrySeparator);
+        } else {
+            this.raw = [this.first, this.last].join(this.config.PassEntrySeparator);
+        }
+
+        if(encrypt) {
+            this.raw = this._encryptFile(appToken);
+        }
+        this.encrypted = encrypt;
     }
 
     decryptFileAndProcess(key) {
@@ -312,10 +387,10 @@ class PassFile { //encrypt/decrypt with appToken
         
         this.first = fsplit.shift();
         this.last = fsplit.pop();
-        this.entries = fsplit;
+        this.rawEntries = fsplit;
 
         if(this.verify()){
-            this.processed = true;
+            this.encrypted = false;
             return true;
         } else {
             this._reset();
@@ -323,16 +398,15 @@ class PassFile { //encrypt/decrypt with appToken
         }
     }
 
-    encryptFile(key) {
+    _encryptFile(key) {
         if(!key) throw new Error("key needed to encrypt this PassFile");
 
         return this.passHandler.encryptToString(this.raw, key);
     }
 
-    isProcessed() {
-        return this.processed;
+    isEncrypted() {
+        return this.encrypted;
     }
-
 
     verify() {
         return this.last === CryptoJS.SHA256(this.first).toString(this.config.SHA256ToStringEncoding);
@@ -341,16 +415,16 @@ class PassFile { //encrypt/decrypt with appToken
     _reset() {
         this.first = null;
         this.last = null;
-        this.entries = null;
+        this.rawEntries = null;
         this.raw = this._rawOriginal;
-        this.processed = false;
+        this.encrypted = true;
     }
 }
 
 function runTestCases(){
     let testPassEntryString = "Fb[|]website[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
     let testPassEntryString1 = "[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
-    let testPassEntryString2 = "0[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
+    let testPassEntryString2 = "Tag0[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
 
     let testPassEntry = new PassEntry();
 
@@ -359,10 +433,14 @@ function runTestCases(){
     let testPassManager = new PassManager();
 
     testPassManager.entries = testPassManager.entriesFromStrings([testPassEntryString]);
-    if(testPassManager.entriesToString() !== testPassEntryString) throw new Error ("Something is wrong with PassManager string conversion");
+    if(testPassManager._entriesToString() !== testPassEntryString) throw new Error ("Something is wrong with PassManager string conversion");
 
     testPassManager.entries = testPassManager.entriesFromStrings([testPassEntryString1]);
-    if(testPassManager.entriesToString() !== testPassEntryString2) throw new Error ("Something is wrong with PassManager string conversion – uniquelyIdentifyEntries");
+    if(testPassManager._entriesToString() !== testPassEntryString2) throw new Error ("Something is wrong with PassManager string conversion – uniquelyIdentifyEntries");
 
     console.log("All tests passed");
+}
+
+function capitalize(str) {
+    return str[0].toUpperCase() + str.slice(1);
 }
