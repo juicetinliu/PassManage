@@ -14,6 +14,9 @@
     --dark-shadow: rgba(70, 70, 70, 0.513);
     --red: #a72f2f;
     --highlight-red: #ea5656;
+    --green: #2fa745;
+    --highlight-green: #62cd76;
+    
 }
 
 .light-mode {
@@ -27,6 +30,8 @@
     --dark-shadow: rgba(70,70,70,0.12);
     --red: #f88484;
     --highlight-red: #ce4b4b;
+    --green: #95ec94;
+    --highlight-green: #6ec46c;
 }
 
 html, body {
@@ -45,6 +50,9 @@ body {
 
 #main-panel {
     overflow: hidden;
+    max-width: 0px;
+    max-height: 0px;
+    transition: max-height 1s ease-in-out 0s, max-width 1s ease-in-out 0.1s;
 }
 
 .material-symbols-rounded {
@@ -161,6 +169,18 @@ body {
     display: none !important;
 }
 
+/* Intro page styles */
+#intro-content {
+    flex-wrap: nowrap;
+}
+
+.intro-main-button{
+    width: 250px;
+    height: 150px;
+    gap: 10px;
+}
+
+
 /* Drop page styles */
 #input-password-file {
     opacity: 0.0;
@@ -203,6 +223,9 @@ body {
 
 #edit-view {
     width: 100%;
+    gap: 10px;
+    overflow-y: auto;
+    flex-wrap: nowrap;
 }
 
 #edit-view-cancel-button {
@@ -211,6 +234,29 @@ body {
 
 #edit-view-cancel-button:hover {
     background-color: var(--highlight-red);
+}
+
+#edit-view-confirm-button {
+    background-color: var(--green);
+}
+
+#edit-view-confirm-button:hover {
+    background-color: var(--highlight-green);
+}
+
+.edit-view-row {
+    flex-wrap: nowrap;
+}
+
+.edit-view-row-header {
+    width: 100px;
+    padding-right: 10px;
+}
+
+.edit-view-row-input {
+    width: 250px;
+    max-width: 250px;
+    min-width: 250px;
 }
 
 
@@ -298,9 +344,20 @@ body {
     width: 10px; /*needed to calculate grow spacing*/
 }
 
+.encrypted-info-toggle-button {
+    margin: 0px 15px;
+}
+
+.encrypted-info-text-content-password {
+    width: 110px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
     width: 10px;
+    height: 10px;
 }
 
 ::-webkit-scrollbar-track {

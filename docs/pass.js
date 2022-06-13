@@ -1,11 +1,25 @@
 //https://www.cdnpkg.com/crypto-js/4.0.0
 //https://cryptojs.gitbook.io/docs/
+//https://www.youtube.com/watch?v=KQjf9get6PE
+const PassEntryConfig = {
+    tag: {isEncrypted: false, isArray: false}, 
+    website: {isEncrypted: false, isArray: false}, 
+    username: {isEncrypted: false, isArray: false}, 
+    email: {isEncrypted: false, isArray: false}, 
+    altEmail: {isEncrypted: false, isArray: false}, 
+    password: {isEncrypted: true, isArray: false}, 
+    secrets: {isEncrypted: true, isArray: true}, 
+    hints: {isEncrypted: false, isArray: true}, 
+    comments: {isEncrypted: false, isArray: true},
+    fields: ["tag", "website", "username", "email", "altEmail", "password", "secrets", "hints", "comments"]
+}
 
 const PassConfig = {
     PassEntryValueSeparator: "[|]",
     PassEntryArraySeparator: "[*]",
     PassEntrySeparator: "\n",
-    SHA256ToStringEncoding: CryptoJS.enc.Base64
+    SHA256ToStringEncoding: CryptoJS.enc.Base64,
+    EntryConfig: PassEntryConfig
 };
 
 class PassEntry {
@@ -157,12 +171,45 @@ class PassManager {
 
         this.entries = [];
         this.passHandler = new AESHandler();
+        this.cryptoWorker = new CryptoWorker();
 
         this.app = app;
 
         this.config = config;
 
+        this.CACHED_MASTER_KEY = null; //Temporarily stored for 5 minutes
+        this.CACHE_MASTER_KEY_DURATION_MS = 5 * 60 * 1000; 
+        this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = null;
+
         this._generateSecrets(); //will be overwritten if passFile is uploaded
+    }
+
+    CACHE_MASTER_KEY(mk) {
+        this.CACHED_MASTER_KEY = mk;
+        this.DESTROY_CACHED_MASTER_KEY(true);
+    }
+
+    DESTROY_CACHED_MASTER_KEY(withTimeout = false) {
+        this.CLEAR_DESTROY_CACHED_MASTER_KEY_TIMEOUT();
+        if(withTimeout) {
+            this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = setTimeout(function() {
+                this.CACHED_MASTER_KEY = null;
+            }.bind(this), this.CACHE_MASTER_KEY_DURATION_MS);
+        } else {
+            this.CACHED_MASTER_KEY = null;
+        }
+    }
+
+    RESET_DESTROY_CACHED_MASTER_KEY_TIMEOUT() {
+        this.CLEAR_DESTROY_CACHED_MASTER_KEY_TIMEOUT();
+        this.DESTROY_CACHED_MASTER_KEY(true);
+    }
+
+    CLEAR_DESTROY_CACHED_MASTER_KEY_TIMEOUT() {
+        if(this.DESTROY_CACHED_MASTER_KEY_TIMEOUT) {
+            clearTimeout(this.DESTROY_CACHED_MASTER_KEY_TIMEOUT);
+        }
+        this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = null;
     }
 
     saveMasterPasswordToHash(masterPassword) {
@@ -187,17 +234,34 @@ class PassManager {
     }
 
     _generateMasterKey() {
-        if(!this.masterPasswordHash) throw new Error("Missing master password hash");
+        if(!this.masterPasswordHash) throw new AppError("Missing master password hash", AppErrorType.MISSING_MASTER_PASSWORD);
         if(!this.deviceSecretHash) throw new Error("Missing device secret hash");
 
-        return CryptoJS.PBKDF2(this.masterPasswordHash, this.deviceSecretHash, {
+        if(this.CACHED_MASTER_KEY) {
+            return Promise.resolve(this.CACHED_MASTER_KEY);
+        }
+
+        this.cryptoWorker.request(CryptoWorkerFunctions.PBKDF2, {
+            masterPasswordHash: this.masterPasswordHash,
+            deviceSecretHash: this.deviceSecretHash,
             keySize: 32,
             iterations: 100000
-        }).toString();
+        });
+
+        return new Promise(resolve => {
+            this.cryptoWorker.onmessage = function (event) {
+                let mk = this.cryptoWorker.getResponse(event);
+                this.CACHE_MASTER_KEY(mk);
+                resolve(mk);
+            }.bind(this);
+        });
     }
 
-    addPassEntry(input) {
-        let masterKey = this._generateMasterKey();
+    async addPassEntry(input) {
+        let masterKey;
+        if(input.password || input.secrets) {
+            masterKey = await this._generateMasterKey();
+        }
         
         let entry = new PassEntry();
         if(input.tag) entry.setTag(input.tag);
@@ -211,25 +275,39 @@ class PassManager {
         if(Array.isArray(input.comments)) input.comments.forEach(val => entry.addToComments(val));
         
         this.entries.push(entry);
-        
-        return true;
     }
 
-    _encryptString(str, masterKey = "") {
+    _encryptString(str, masterKey) {
         if(!masterKey) {
-            masterKey = this._generateMasterKey();
+            throw new Error("Missing master key");
         }
         return this.passHandler.encryptToString(str, masterKey);
     }
 
-    _decryptString(str, masterKey = "") {
+    _decryptString(str, masterKey) {
         if(!masterKey) {
-            masterKey = this._generateMasterKey();
+            throw new Error("Missing master key");
         }
         return this.passHandler.decryptToString(str, masterKey);
     }
 
-    // decryptPassEntry(tag) {}
+    async decryptPassEntryField(encryptedString, field) {
+        let entryConfig = this.config.EntryConfig;
+        if(!entryConfig.fields.includes(field)) throw new Error(field + ' is an invalid PassEntry field');
+        if(!entryConfig[field].isEncrypted) {
+            console.log("No need to decrypt " + field);
+            return encryptedString;
+        }
+        let masterKey = await this._generateMasterKey();
+        
+        let out = this._decryptString(encryptedString, masterKey);
+
+        if(entryConfig[field].isArray) {
+            console.log(out); 
+            // WILL NEED TO SPLIT
+        }
+        return out;
+    }
 
     getPassFile(encrypt = false) {
         let out = new PassFile();
@@ -316,8 +394,6 @@ class AESHandler extends PassHandler {
         return hash.toString(encoder)
     }
 }
-
-
 
 class PassFile { //encrypt/decrypt with appToken
     constructor(raw = "", config = PassConfig) {

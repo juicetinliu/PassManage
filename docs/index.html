@@ -7,13 +7,16 @@
 
   <script language="javascript" type="text/javascript" src="https://juicetinliu.github.io/misc.js"></script>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.js"></script>
-
+  
+  <script language="javascript" type="text/javascript" src="errors.js"></script>
+  <script language="javascript" type="text/javascript" src="crypto.js"></script>
   <script language="javascript" type="text/javascript" src="pass.js"></script>
   <script language="javascript" type="text/javascript" src="components.js"></script>
   <script language="javascript" type="text/javascript" src="pages.js"></script>
   <script language="javascript" type="text/javascript" src="app.js"></script>
 
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="loading.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,600,0,200" />
 </head>
 
@@ -43,14 +46,30 @@
         </div>
       </div>
       <div id="main-panel" class="p p-out p-round">
-        <div id="all-content" class="h hv-c vh-c">
+        <div id="main-panel-loading" class="large-square-loader"><div></div><div></div><div></div><div></div></div>
+        <div id="all-pages" class="h hv-c vh-c">
+          <div id="intro-page">
+            <div id="intro-content" class="h hv-c vh-c">
+              <div id="intro-start-new-content" class="butt butt-main v hv-c vh-c intro-main-button">
+                <span class="material-symbols-rounded">
+                  note_add
+                </span>
+                Start new file
+              </div>
+              <div id="intro-from-file-content" class="butt butt-main v hv-c vh-c intro-main-button">
+                <span class="material-symbols-rounded">
+                  upload_file
+                </span>
+                Use existing file
+              </div>
+            </div>
+          </div>
           <div id="edit-page">
             <div id="edit-content" class="p p-round">
               <!-- EditPage() generates content -->
             </div>
           </div>
           <div id="main-page">
-            
             <div id="main-content" class="p p-round">
               <!-- MainPage() generates content -->
             </div>

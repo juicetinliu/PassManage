@@ -5,12 +5,15 @@ class App {
         this.appToken = "password";
 
         this.main = new Element("id", "main");
+        this.mainPanel = new Element("id", "main-panel");
+        this.mainLoading = new Element("id", "main-panel-loading");
 
         this.pages = {
             DropPage: new DropPage(this), 
             LoginPage: new LoginPage(this), 
             MainPage: new MainPage(this),
-            EditPage: new EditPage(this)
+            EditPage: new EditPage(this),
+            IntroPage: new IntroPage(this)
         };
 
         Object.values(this.pages).forEach(p => p.setAppPages(this.pages));
@@ -24,13 +27,16 @@ class App {
 
     run() {
         this.setup();
+        this.transitionFromIntro();
         this.main.show();
     }
 
     setup(){
         Object.values(this.pages).forEach(p => p.setup());
+        this.mainLoading.hide();
 
-        this.pages.DropPage.show();
+        this.pages.IntroPage.show();
+        // this.pages.DropPage.show();
         // this.pages.LoginPage.show();
         // this.pages.MainPage.show();
         // this.pages.EditPage.show();
@@ -42,19 +48,25 @@ class App {
 
     hideAllPages() {
         Object.values(this.pages).forEach(p => p.hide());
+        this.mainLoading.hide();
+        // this.mainPanel.getElement().style.maxWidth = "100px";
     }
 
-    savePasswordToPassManager(pw) {
+    savePasswordToPassManager(pw, referringPage, callBack) {
         this.hideAllPages();
-
+        this.mainLoading.show();
         setTimeout(function() {
             this.passManager.saveMasterPasswordToHash(pw);
 
-            this.goToMainPage();
+            if(callBack) { //callback after saving password 
+                callBack(referringPage);
+            } else {
+                this.goToMainPage(referringPage);
+            }
         }.bind(this), this.PROCESS_DELAY_MS);
     }
 
-    extractRawPassFile() {
+    extractRawPassFile(referringPage) {
         this.hideAllPages();
 
         if(!this.rawPassFile) throw new Error("no rawPassFile found");
@@ -64,6 +76,7 @@ class App {
         fr.readAsText(this.rawPassFile);
         
         fr.onload = function() {
+            this.mainLoading.show();
             setTimeout(function() {
                 let passFile = new PassFile(fr.result);
 
@@ -74,7 +87,7 @@ class App {
                         console.log("Something went wrong with decrypting passFile")
                         console.log(e);
                         this.rawPassFile = null;
-                        this.goToDropPage(); //go back to drop page;
+                        this.goToDropPage(referringPage); //go back to drop page;
                         return;
                     }
                 }
@@ -89,11 +102,11 @@ class App {
                     console.log("Something went wrong with parsing passFile")
                     console.log(e);
                     this.rawPassFile = null;
-                    this.goToDropPage(); //go back to drop page;
+                    this.goToDropPage(referringPage); //go back to drop page;
                     return;
                 }
 
-                this.goToLoginPage();
+                this.goToLoginPage(referringPage);
             }.bind(this), this.PROCESS_DELAY_MS);
         }.bind(this);
     }
@@ -120,37 +133,67 @@ class App {
         URL.revokeObjectURL(a.href);
     }
 
-    addPassEntry(input) {
-        this.passManager.addPassEntry(input);
+    async addPassEntry(input, referringPage) {
+        this.hideAllPages();
+        this.mainLoading.show();
 
-        let entries = this.getPassManagerEntries();
-
+        // https://stackoverflow.com/questions/14367168/css-animations-stall-when-running-javascript-function
+        try {
+            await this.passManager.addPassEntry(input); //wait for web worker completion
+        } catch (e) {
+            if(e instanceof AppError) {
+                if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
+                    let callBackAfterLogin = (refPage) => {
+                        this.addPassEntry(input, refPage);
+                    };
+                    this.goToLoginPage(referringPage, callBackAfterLogin);
+                    return;
+                }
+            }
+            throw e;
+        }
         this.pages.MainPage.updateMainTableEntries();
-
-        this.goToMainPage();
+        this.goToMainPage(referringPage);
     }
 
     confirmEditPageEntry(entry) {
         this.pages.EditPage.confirmEditEntry(entry);
     }
 
-    goToEditPage(action) {
+    async decryptPassEntryPassword(p) {
+        return await this.passManager.decryptPassEntryField(p, "password");
+    }
+
+    async decryptPassEntrySecrets(s) {
+        return await this.passManager.decryptPassEntryField(s, "secrets");
+    }
+
+    goToEditPage(action, referringPage) {
         this.pages.EditPage.show();
         this.pages.EditPage.setAction(action);
+        this.pages.EditPage.setReferringPage(referringPage);
     }
 
-    goToMainPage() {
+    goToMainPage(referringPage) {
         this.pages.MainPage.show();
+        this.pages.EditPage.setReferringPage(referringPage);
     }
 
-    goToDropPage() {
+    goToDropPage(referringPage) {
         this.pages.DropPage.show();
+        this.pages.DropPage.setReferringPage(referringPage);
     }
 
-    goToLoginPage() {
+    goToLoginPage(referringPage, callBackAfterLogin) {
         this.pages.LoginPage.show();
+        this.pages.LoginPage.setReferringPage(referringPage);
+        this.pages.LoginPage.setCallBackAfterLogin(callBackAfterLogin);
+    }
+
+    transitionFromIntro() {
+        setTimeout(function() {
+            this.mainPanel.getElement().style.maxWidth = "2000px";
+            this.mainPanel.getElement().style.maxHeight = "2000px";
+        }.bind(this), 500);
     }
 }
-
-
-//https://stackoverflow.com/questions/7060750/detect-the-enter-key-in-a-text-input-field

@@ -5,6 +5,8 @@ class Page {
         this.appPages = null;
         this.components = {};
 
+        this.referringPage = null; //page that resulted in this one opening
+
         this.created = false;
     }
 
@@ -31,6 +33,33 @@ class Page {
     create() {
         this.created = true;
     }
+
+    setReferringPage(page) {
+        this.referringPage = page;
+    }
+}
+
+class IntroPage extends Page {
+    constructor(app) {
+        super("intro-page", app);
+    
+        this.startNewButton = new Element("id", "intro-start-new-content");
+        this.fromFileButton = new Element("id", "intro-from-file-content");
+    }
+
+    setup() {
+        this.startNewButton.addEventListener(["click"], function() {
+            this.app.goToMainPage();
+        }.bind(this));
+
+        this.fromFileButton.addEventListener(["click"], function() {
+            this.app.goToDropPage(this);
+        }.bind(this));
+    }
+
+    show() {
+        super.show();
+    }
 }
 
 class EditPage extends Page {
@@ -53,8 +82,6 @@ class EditPage extends Page {
     
     setup() {
         super.setup();
-        let editContent = this.editContent.getElement();
-        editContent.style.width = is_mobile_or_tablet_view() ? "60vw" : "800px";
     }
 
     setAction(action) {
@@ -81,7 +108,7 @@ class EditPage extends Page {
 
     confirmEditEntry(entry) {
         if(this.action === this.actionTypes.ADD) {
-            this.app.addPassEntry(entry);
+            this.app.addPassEntry(entry, this);
         } else if (this.action === this.actionTypes.EDIT) {
             // this.app.editPassEntry(entry);
         } else {
@@ -153,6 +180,11 @@ class LoginPage extends Page {
         this.inputUsername = new Element("id", "input-user");
         this.inputPassword = new Element("id", "input-password");
         this.submitUserPasswordButton = new Element("id", "submit-user-password");
+        this.callBackAfterLogin = null;
+    }
+
+    setCallBackAfterLogin(callBack) {
+        this.callBackAfterLogin = callBack;
     }
 
     setup() {
@@ -166,9 +198,17 @@ class LoginPage extends Page {
         
         this.submitUserPasswordButton.addEventListener(["click"], function() {
             let pw = this.inputPassword.getElement().value;
+            this.validatePassword(pw);
             this.inputPassword.getElement().value = "";
 
             this._savePasswordToApp(pw);
+        }.bind(this));
+
+        // https://stackoverflow.com/questions/7060750/detect-the-enter-key-in-a-text-input-field
+        this.inputPassword.addEventListener(["keyup"], function(event) {
+            if(event.key === 'Enter' || event.keyCode === 13){
+                this.submitUserPasswordButton.getElement().click();
+            }
         }.bind(this));
     }
 
@@ -178,7 +218,11 @@ class LoginPage extends Page {
     }
 
     _savePasswordToApp(p) {
-        this.app.savePasswordToPassManager(p);
+        this.app.savePasswordToPassManager(p, this, this.callBackAfterLogin);
+    }
+
+    validatePassword(password) {
+        if(!password) throw new AppError("Password must not be empty", AppErrorType.INVALID_MASTER_PASSWORD);
     }
 }
 
@@ -247,7 +291,7 @@ class DropPage extends Page {
         }.bind(this));
 
         this.confirmPassFileButton.addEventListener(["click"], function() {
-            this._appExtractRawPassFile();
+            this._appExtractRawPassFile(this);
         }.bind(this));
     }
 
@@ -294,7 +338,7 @@ class DropPage extends Page {
     //https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
     _dropZoneDropHandler(event) {
         event.preventDefault();
-
+        console.log(event);
         if (event.dataTransfer.items) {
             if (!event.dataTransfer.items.length || event.dataTransfer.items.length > 1) { //only 1 file allowed
                 return;
@@ -350,7 +394,7 @@ class DropPage extends Page {
         this.app.setRawPassFile(null);
     }
 
-    _appExtractRawPassFile() {
-        this.app.extractRawPassFile();
+    _appExtractRawPassFile(referringPage) {
+        this.app.extractRawPassFile(referringPage);
     }
 }
