@@ -2,7 +2,8 @@ const AppErrorType = {
     MISSING_MASTER_PASSWORD: "MasterPasswordMissing",
     INVALID_MASTER_PASSWORD: "MasterPasswordInvalid",
 
-    GENERATING_MASTER_KEY: "GeneratingMasterKey"
+    GENERATING_MASTER_KEY: "GeneratingMasterKey",
+    INVALID_PASS_ENTRY_FIELD: "InvalidPassEntryField"
 }
 
 class AppError extends Error {

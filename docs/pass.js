@@ -11,7 +11,14 @@ const PassEntryConfig = {
     secrets: {isEncrypted: true, isArray: true}, 
     hints: {isEncrypted: false, isArray: true}, 
     comments: {isEncrypted: false, isArray: true},
-    fields: ["tag", "website", "username", "email", "altEmail", "password", "secrets", "hints", "comments"]
+    
+    allFields: ["tag", "website", "username", "email", "altEmail", "password", "secrets", "hints", "comments"],
+    processForTableFields: {
+        tag: (e) => e.tag,
+        website: (e) => e.website,
+        username: (e) => e.username ? e.username : e.email,
+        password: (e) => e.password
+    }
 }
 
 const PassConfig = {
@@ -24,140 +31,81 @@ const PassConfig = {
 
 class PassEntry {
     constructor(config = PassConfig) {
-        this.tag = ""; //Unique identifier like website or name
-        this.website = "";
-        this.username = "";
-        this.email = "";
-        this.altEmail = "";
-        this.password = ""; //hashed
-        this.secrets = []; //hashed
-        this.hints = [];
-        this.comments = [];
-
-        this.unhashedPassword = "";
-        this.unhashedHints = [];
-
         this.config = config;
+        this.initialize();
+    }
+
+    initialize() {
+        let entryConfig = this.config.EntryConfig;
+        entryConfig.allFields.forEach(field => {
+            this[field] = entryConfig[field].isArray ? [] : "";
+        })
     }
 
     export(forTableView = true) {
+        let out = {};
         if(forTableView) { //just return useful entries
-            return {
-                tag: this.tag,
-                website: this.website, 
-                username: this.username ? this.username : this.email,
-                password: this.password
-            };
+            Object.entries(this.config.EntryConfig.processForTableFields)
+                .forEach(process => {
+                    out[process[0]] = process[1](this); //apply anonymous function in config
+                });
         } else { //return all entries for secondary view
-            return {
-                tag: this.tag, 
-                website: this.website, 
-                username: this.username, 
-                email: this.email, 
-                altEmail: this.altEmail, 
-                password: this.password, 
-                secrets: this.secrets, 
-                hints: this.hints, 
-                comments: this.comments
-            };
+            this.config.EntryConfig.allFields.forEach(field => {
+                out[field] = this[field];
+            })
+        }
+        return out;
+    }
+
+    getField(field) {
+        if(!this.isFieldValid(field)) throw new AppError(field + ' is an invalid PassEntry field to get', AppErrorType.INVALID_PASS_ENTRY_FIELD);
+        return this[field];
+    }
+
+    addOrSaveToField(field, value) {
+        if(!this.isFieldValid(field)) throw new AppError(field + ' is an invalid PassEntry field to add or save to', AppErrorType.INVALID_PASS_ENTRY_FIELD);
+        if(value) {
+            if(this.config.EntryConfig[field].isArray) {
+                this[field].push(value);
+            } else {
+                this[field] = value;
+            }
         }
     }
 
-    setTag(tag) {
-        if(tag) {
-            this.tag = tag;
-        }
-    }
-
-    getTag() {
-        return this.tag;
-    }
-
-    setWebsite(website) {
-        if(website) {
-            this.website = website;
-        }
-    }
-
-    setUsername(username) {
-        if(username) {
-            this.username = username;
-        }
-    }
-
-    setEmail(email) {
-        if(email) {
-            this.email = email;
-        }
-    }
-
-    setAltEmail(altEmail) {
-        if(altEmail) {
-            this.altEmail = altEmail;
-        }
-    }
-    
-    setPassword(password) {
-        if(password) {
-            this.password = password;
-        }
-    }
-
-    addToSecrets(secret) {
-        if(secret) {
-            this.secrets.push(secret);
-        }
-    }
-
-    addToHints(hint) {
-        if(hint) {
-            this.hints.push(hint);
-        }
-    }
-
-    addToComments(comment) {
-        if(comment) {
-            this.comments.push(comment);
-        }
+    isFieldValid(field) {
+        return this.config.EntryConfig.allFields.includes(field);
     }
 
     toString() {
-        let out = [
-            this.tag,
-            this.website,
-            this.username,
-            this.email,
-            this.altEmail,
-            this.password,
-            this.secrets.join(this.config.PassEntryArraySeparator),
-            this.hints.join(this.config.PassEntryArraySeparator),
-            this.comments.join(this.config.PassEntryArraySeparator)
-        ];
+        let out = [];
+        let entryConfig = this.config.EntryConfig;
+        entryConfig.allFields.forEach(field => {
+            out.push(
+                entryConfig[field].isArray 
+                ? this[field].join(this.config.PassEntryArraySeparator)
+                : this[field]
+            );
+        })
         return out.join(this.config.PassEntryValueSeparator);
     }
 
     fromString(str) {
         let values = str.split(this.config.PassEntryValueSeparator);
+        let entryConfig = this.config.EntryConfig;
         
-        if(values.length != 9) throw new Error("Not enough fields to reconstruct PassEntry from string");
+        if(values.length < entryConfig.allFields.length) throw new Error("Not enough fields to reconstruct PassEntry from string");
 
         let out = new PassEntry();
-        out.setTag(values[0]);
-        out.setWebsite(values[1]);
-        out.setUsername(values[2]);
-        out.setEmail(values[3]);
-        out.setAltEmail(values[4]);
-        out.setPassword(values[5]);
-        values[6].split(this.config.PassEntryArraySeparator).forEach(val => out.addToSecrets(val));
-        values[7].split(this.config.PassEntryArraySeparator).forEach(val => out.addToHints(val));
-        values[8].split(this.config.PassEntryArraySeparator).forEach(val => out.addToComments(val));
-
+        entryConfig.allFields.forEach((field, index) => {
+            let value = values[index];
+            if(entryConfig[field].isArray) {
+                value.split(this.config.PassEntryArraySeparator).forEach(val => out.addOrSaveToField(field, val));
+            } else {
+                out.addOrSaveToField(field, value);
+            }
+        });
         return out;
-    }
-
-    destroyUnhashedData() {
-        this.unhashedPassword = "";
-        this.unhashedHints = [];
     }
 }
 
@@ -233,15 +181,17 @@ class PassManager {
         this.deviceSecretHash = CryptoJS.SHA256(this.deviceSecret).toString(this.config.SHA256ToStringEncoding);
     }
 
-    _generateMasterKey() {
+    _generateMasterKey(retries = 0) {
         if(!this.masterPasswordHash) throw new AppError("Missing master password hash", AppErrorType.MISSING_MASTER_PASSWORD);
         if(!this.deviceSecretHash) throw new Error("Missing device secret hash");
 
         if(this.CACHED_MASTER_KEY) {
             return Promise.resolve(this.CACHED_MASTER_KEY);
         }
-
-        this.cryptoWorker.request(CryptoWorkerFunctions.PBKDF2, {
+        
+        if(retries > this.cryptoWorker.MAX_REQUEST_RETRY) throw new AppError("Maximum number of retry requests reached; try again later", AppErrorType.GENERATING_MASTER_KEY);
+        
+        let jobID = this.cryptoWorker.request(CryptoWorkerFunctions.PBKDF2, {
             masterPasswordHash: this.masterPasswordHash,
             deviceSecretHash: this.deviceSecretHash,
             keySize: 32,
@@ -249,11 +199,20 @@ class PassManager {
         });
 
         return new Promise(resolve => {
-            this.cryptoWorker.onmessage = function (event) {
-                let mk = this.cryptoWorker.getResponse(event);
-                this.CACHE_MASTER_KEY(mk);
-                resolve(mk);
-            }.bind(this);
+            let onmessageRun = (event) => {
+                let mk = this.cryptoWorker.getResponseForID(event, jobID);
+                if(mk === CryptoWorkerFunctions.NOTMYRESULT) { //retry after small delay
+                    setTimeout(async () => {
+                        let retrymk = await this._generateMasterKey(retries + 1);
+                        this.CACHE_MASTER_KEY(retrymk);
+                        resolve(retrymk);
+                    }, this.cryptoWorker.REQUEST_RETRY_DELAY_MS);
+                } else {
+                    this.CACHE_MASTER_KEY(mk);
+                    resolve(mk);
+                }
+            }
+            this.cryptoWorker.pushToOnmessageQueue(onmessageRun);
         });
     }
 
@@ -264,15 +223,20 @@ class PassManager {
         }
         
         let entry = new PassEntry();
-        if(input.tag) entry.setTag(input.tag);
-        if(input.website) entry.setWebsite(input.website);
-        if(input.username) entry.setUsername(input.username);
-        if(input.email) entry.setEmail(input.email);
-        if(input.altEmail) entry.setAltEmail(input.altEmail);
-        if(input.password) entry.setPassword(this._encryptString(input.password, masterKey)); //hashed
-        if(Array.isArray(input.secrets)) input.secrets.forEach(val => entry.addToSecrets(this._encryptString(val, masterKey))); //hashed
-        if(Array.isArray(input.hints)) input.hints.forEach(val => entry.addToHints(val));
-        if(Array.isArray(input.comments)) input.comments.forEach(val => entry.addToComments(val));
+        
+        let entryConfig = this.config.EntryConfig;
+        entryConfig.allFields.forEach(field => {
+            let value = input[field];
+            if(value) {
+                if(entryConfig[field].isArray) {
+                    if(entryConfig[field].isEncrypted) value = value.map(val => this._encryptString(val, masterKey));
+                    value.forEach(val => entry.addOrSaveToField(field, val));
+                } else {
+                    if(entryConfig[field].isEncrypted) value = this._encryptString(value, masterKey);
+                    entry.addOrSaveToField(field, value);
+                }
+            }
+        });
         
         this.entries.push(entry);
     }
@@ -291,9 +255,9 @@ class PassManager {
         return this.passHandler.decryptToString(str, masterKey);
     }
 
-    async decryptPassEntryField(encryptedString, field) {
+    async decryptPassEntryField(field, encryptedString) {
         let entryConfig = this.config.EntryConfig;
-        if(!entryConfig.fields.includes(field)) throw new Error(field + ' is an invalid PassEntry field');
+        if(!this.isPassEntryFieldValid(field)) throw new AppError(field + ' is an invalid PassEntry field to decrypt', AppErrorType.INVALID_PASS_ENTRY_FIELD);
         if(!entryConfig[field].isEncrypted) {
             console.log("No need to decrypt " + field);
             return encryptedString;
@@ -309,7 +273,7 @@ class PassManager {
         return out;
     }
 
-    getPassFile(encrypt = false) {
+    getPassFileFromEntries(encrypt = false) {
         let out = new PassFile();
         out.setRawFromEntryStrings(
             this.fileSecret,
@@ -327,6 +291,10 @@ class PassManager {
         })
     }
 
+    isPassEntryFieldValid(field) {
+        return this.config.EntryConfig.allFields.includes(field);
+    }
+
     entriesFromStrings(passEntryStrings) {
         if(!Array.isArray(passEntryStrings)) throw new Error("strings should be in an Array");
 
@@ -334,7 +302,7 @@ class PassManager {
         passEntryStrings.forEach(passEntryString => {
             passEntries.push(new PassEntry().fromString(passEntryString));
         });
-
+        this._processEntryTags(passEntries);
         return passEntries;
     }
 
@@ -347,21 +315,61 @@ class PassManager {
     }
 
     _entriesToString() {
-        this._uniquelyIdentifyEntries();
         let entryStrings = [];
+        this._processEntryTags(this.entries);
         this.entries.forEach(entry => {
             entryStrings.push(entry.toString());
         })
-
         return entryStrings.join(this.config.PassEntrySeparator);
     }
 
-    _uniquelyIdentifyEntries() {
-        this.entries.forEach((entry, index) => {
-            if (!entry.getTag()) {
-                entry.setTag("Tag" + index);
+    _processEntryTags(entries) { //uniquely identify entries and fill in missing tags
+        let getDuplicateTagEntryIndex = (tag) => {return this.entryAlreadyExistsWithTag(tag, true, entries)};
+        let tagField = "tag";
+        let appendNum = 0;
+        entries.forEach((entry, index) => {
+            let considerTagName;
+            let thisTag = entry.getField(tagField);
+            let indexOfInitialDuplicate = getDuplicateTagEntryIndex(thisTag);
+
+            if (!thisTag) { // use placeholder tag if it doesn't exist
+                considerTagName = tagField + appendNum; //Eg. tag2
+                let indexOfDuplicate = getDuplicateTagEntryIndex(considerTagName);
+                while(indexOfDuplicate >= 0 && indexOfDuplicate != index) { 
+                    appendNum += 1;
+                    considerTagName = tagField + appendNum;
+                    indexOfDuplicate = getDuplicateTagEntryIndex(considerTagName);
+                }
+                entry.addOrSaveToField(tagField, considerTagName);
+            } else if (indexOfInitialDuplicate >= 0 && indexOfInitialDuplicate != index) {
+                let appendNewNum = 0;
+                considerTagName = thisTag + appendNewNum;
+                let indexOfDuplicate = getDuplicateTagEntryIndex(considerTagName);
+                while(indexOfDuplicate >= 0 && indexOfDuplicate != index) { 
+                    appendNewNum += 1;
+                    considerTagName = thisTag + appendNewNum;
+                    indexOfDuplicate = getDuplicateTagEntryIndex(considerTagName);
+                }
+                entry.addOrSaveToField(tagField, considerTagName);
             }
         });
+    }
+
+    entryAlreadyExistsWithTag(tag, returnIndex = false, entries = this.entries) {
+        if(returnIndex) {
+            return entries.findIndex(e => {
+                return e.tag === tag;
+            })
+        } else {
+            let other = entries.find(e => {
+                return e.tag === tag;
+            })
+            return other ? true : false;
+        }
+    }
+
+    close() {
+        this.cryptoWorker.terminate();
     }
 }
 
@@ -500,7 +508,7 @@ class PassFile { //encrypt/decrypt with appToken
 function runTestCases(){
     let testPassEntryString = "Fb[|]website[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
     let testPassEntryString1 = "[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
-    let testPassEntryString2 = "Tag0[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
+    let testPassEntryString2 = "tag0[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
 
     let testPassEntry = new PassEntry();
 
@@ -515,6 +523,8 @@ function runTestCases(){
     if(testPassManager._entriesToString() !== testPassEntryString2) throw new Error ("Something is wrong with PassManager string conversion – uniquelyIdentifyEntries");
 
     console.log("All tests passed");
+
+    testPassManager.close();
 }
 
 function capitalize(str) {

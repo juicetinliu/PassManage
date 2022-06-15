@@ -268,11 +268,12 @@ class SmallSquareLoader extends Component {
 }
 
 class EncryptedInformation extends Component {
-    constructor(app, page, tag, passEntryField, info, encryptedPlaceholderText = ""){
+    constructor(app, page, tag, passEntryField, info, encryptedPlaceholderText = "", emptyFieldText = "-"){
         super("id", "encrypted-info-component-" + passEntryField + "-" + tag, page, app);
         this.passEntryField = passEntryField;
         this.encryptedInfo = info;
         this.encryptedPlaceholderText = encryptedPlaceholderText;
+        this.emptyFieldText = emptyFieldText;
 
         this.CONTENT_CLASSES = "h hv-l vh-c".split(" ");
         this.INFO_CONTENT_CLASS = "encrypted-info-text-content-" + passEntryField;
@@ -302,11 +303,8 @@ class EncryptedInformation extends Component {
         infoText.id = this.encryptedInfoText.label;
         infoText.classList.add(this.INFO_TEXT_CLASS);
 
-        if(this.encryptedPlaceholderText) {
-            infoText.innerHTML = this.encryptedPlaceholderText;
-        } else {
-            infoText.innerHTML = this.encryptedInfo;
-        }
+        //always start off encrypted
+        infoText.innerHTML = this.formatEncryptedText();
 
         let loader = this.loader.create();
         loader.classList.add("hide");
@@ -335,9 +333,8 @@ class EncryptedInformation extends Component {
             } catch(e) {
                 if(e instanceof AppError) {
                     if(e.isType(AppErrorType.GENERATING_MASTER_KEY)) {
-                        //TODO: HOW TO HANDLE THIS BETTER
                         console.log(e)
-                        this.encrypted = true;
+                        this.encrypted = !this.encrypted; //change back to previous state
                         await this.setTextAsync();
                     }
                 }
@@ -347,15 +344,16 @@ class EncryptedInformation extends Component {
     }
 
     async setTextAsync() {
+        if(!this.encryptedInfo) return this.emptyFieldText;
+
         let text;
         if(this.encrypted) {
-            if(this.encryptedPlaceholderText) {
-                text = this.encryptedPlaceholderText;
-            } else {
-                text = this.encryptedInfo;
-            }
+            text = this.formatEncryptedText();
         } else {
             text = await this.decryptText(this.encryptedInfo);
+        }
+        if(this.encrypted) { //double check the state in case decryption is complete later but we're back to encrypted
+            text = this.formatEncryptedText();
         }
         this.encryptedInfoText.getElement().innerHTML = text;
     }
@@ -363,12 +361,18 @@ class EncryptedInformation extends Component {
     async decryptText(text) {
         return await this.app.decryptPassEntryPassword(text);
     }
+
+    formatEncryptedText() {
+        if(!this.encryptedInfo) return this.emptyFieldText;
+
+        return this.encryptedPlaceholderText ? this.encryptedPlaceholderText : this.encryptedInfo;
+    }
 }
 
 class MainPassEntryRow extends Component {
     constructor(app, page, entry) {
-        super("id", "main-entry-" + entry.getTag(), page, app);
-        this.tag = entry.getTag()
+        super("id", "main-entry-" + entry.getField("tag"), page, app);
+        this.tag = entry.getField("tag");
         let exportedEntry = entry.export(true);
         this.entry = Object.entries(exportedEntry);
 
@@ -733,6 +737,9 @@ class EditView extends Component {
     validateValues(entry) {
         if(!entry.tag) {
             throw new Error("Entry must have a tag");
+        }
+        if(this.app.passManager.entryAlreadyExistsWithTag(entry.tag)) {
+            throw new Error("Entry cannot have same tag as existing entries");
         }
     }
 

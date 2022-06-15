@@ -121,7 +121,7 @@ class App {
 
     //https://robkendal.co.uk/blog/2020-04-17-saving-text-to-client-side-file-using-vanilla-js
     downloadPassFile() {
-        let downloadPassFile = this.passManager.getPassFile(true);
+        let downloadPassFile = this.passManager.getPassFileFromEntries(true);
 
         let a = document.createElement('a');
         let file = new Blob([downloadPassFile.getRaw()], {type: 'text/plain'});
@@ -161,11 +161,11 @@ class App {
     }
 
     async decryptPassEntryPassword(p) {
-        return await this.passManager.decryptPassEntryField(p, "password");
+        return await this.passManager.decryptPassEntryField("password", p);
     }
 
     async decryptPassEntrySecrets(s) {
-        return await this.passManager.decryptPassEntryField(s, "secrets");
+        return await this.passManager.decryptPassEntryField("secrets", s);
     }
 
     goToEditPage(action, referringPage) {

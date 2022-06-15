@@ -1,5 +1,6 @@
 const CryptoWorkerFunctions = {
-    PBKDF2: "PBKDF2"
+    PBKDF2: "PBKDF2",
+    NOTMYRESULT: "NOTMYRESULT"
 }
 
 const CryptoWorkerFunctionParameters = {
@@ -9,39 +10,42 @@ const CryptoWorkerFunctionParameters = {
 class CryptoWorker extends Worker{
     constructor() {
         super('cryptoWorker.js');
+        this.jobID = 0;
+        this.MAX_REQUEST_RETRY = 5;
+        this.REQUEST_RETRY_DELAY_MS = 250;
 
-        this.working = false;
-        this.workingFunc = null;
+        this.onmessageQueue = [];
+
+        this.onmessage = (event) => {
+            this.onmessageQueue.forEach(f => f(event));
+            this.onmessageQueue = [];
+        }
     }
 
     request(func, parameters = {}) {
-        if(!this.working){
-            this.working = true;
-            this.workingFunc = func;
+        let currJobID = this.jobID;
+        this.jobID += 1;
+        let thisJob = [currJobID, func, parameters];
 
-            if(func === CryptoWorkerFunctions.PBKDF2) {
-                this.postMessage([func, parameters]);
-                console.log("Request sent to worker");
-            } else {
-                throw new Error("Function " + func + " not runnable");
-            }
-        } else{ 
-            throw new AppError("CryptoWorker is working on " + this.workingFunc, AppErrorType.GENERATING_MASTER_KEY);
+        if(func === CryptoWorkerFunctions.PBKDF2) {
+            this.postMessage(thisJob);
+        } else {
+            throw new Error("Function " + func + " not runnable");
         }
+        return currJobID;
     }
 
-    getResponse(e) {
-        let out = null;
-        if(this.workingFunc === CryptoWorkerFunctions.PBKDF2) {
-            out = e.data;
-        }
-
-        this.reset();
-        return out;
+    pushToOnmessageQueue(func) {
+        this.onmessageQueue.push(func);
     }
 
-    reset() {
-        this.working = false;
-        this.workingFunc = null;
+    getResponseForID(e, id) {
+        let jobID = e.data[0];
+        let response = e.data[1];
+
+        if(jobID !== id) {
+            return CryptoWorkerFunctions.NOTMYRESULT;
+        }
+        return response;
     }
 }
