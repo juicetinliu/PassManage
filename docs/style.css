@@ -339,7 +339,7 @@ body {
 }
 
 .entry-col {
-    overflow: hidden;
+    word-break: break-word;
     flex-grow: 1;
     width: 10px; /*needed to calculate grow spacing*/
 }

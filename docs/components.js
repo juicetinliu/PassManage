@@ -138,6 +138,7 @@ class Component extends Element{ //reusable & created elements
     constructor(type, label, page, app) {
         super(type, label);
         this.app = app;
+        this.config = app.passManager.config;
         this.page = page;
         this.created = false;
     }
@@ -279,8 +280,10 @@ class EncryptedInformation extends Component {
         this.INFO_CONTENT_CLASS = "encrypted-info-text-content-" + passEntryField;
         this.INFO_TEXT_CLASS = "encrypted-info-text-" + passEntryField;
 
-        this.toggleButton = new EncryptedInformationToggleButton(app, page, tag, this);
-
+        if(info) {
+            this.toggleButton = new EncryptedInformationToggleButton(app, page, tag, this);
+        }
+        
         this.encryptedInfoTextContent = new Element("id", "encrypted-info-text-content-" + passEntryField + "-" + tag);
         
         this.encryptedInfoText = new Element("id", "encrypted-info-text-" + passEntryField + "-" + tag);
@@ -312,10 +315,12 @@ class EncryptedInformation extends Component {
         infoContent.appendChild(loader);
         infoContent.appendChild(infoText);
 
-        let button = this.toggleButton.create();
-
         element.appendChild(infoContent);
-        element.appendChild(button);
+
+        if(this.encryptedInfo) {
+            let button = this.toggleButton.create();
+            element.appendChild(button);
+        }
 
         return element;
     }
@@ -323,6 +328,8 @@ class EncryptedInformation extends Component {
     toggle() {}
 
     setup() {
+        if(!this.encryptedInfo) return;
+
         this.toggleButton.addEventListener(['click'], async function() {
             this.encrypted = !this.encrypted;
             this.encryptedInfoText.getElement().innerHTML = "";
@@ -333,9 +340,12 @@ class EncryptedInformation extends Component {
             } catch(e) {
                 if(e instanceof AppError) {
                     if(e.isType(AppErrorType.GENERATING_MASTER_KEY)) {
-                        console.log(e)
+                        console.log(e);
                         this.encrypted = !this.encrypted; //change back to previous state
                         await this.setTextAsync();
+                    } else if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
+                        console.log(e);
+                        this.encrypted = !this.encrypted; //change back to previous state
                     }
                 }
             }
@@ -359,7 +369,7 @@ class EncryptedInformation extends Component {
     }
 
     async decryptText(text) {
-        return await this.app.decryptPassEntryPassword(text);
+        return await this.app.decryptPassEntryPassword(text, this.page, this);
     }
 
     formatEncryptedText() {
@@ -380,9 +390,15 @@ class MainPassEntryRow extends Component {
         this.ENTRY_COL_CLASS = "entry-col";
         this.EMPTY_FIELD_TEXT = "-";
         
+        let passEntryConfig = this.config.EntryConfig;
+
         this.PASSWORD_HIDDEN_TEXT = "********";
-        this.PASSWORD_HEADER = "password";
-        this.passwordEncryptedInformation = new EncryptedInformation(app, page, this.tag, this.PASSWORD_HEADER, exportedEntry[this.PASSWORD_HEADER], this.PASSWORD_HIDDEN_TEXT);        
+        this.PASSWORD_HEADER = passEntryConfig.password.value;
+        this.passwordEncryptedInformation = new EncryptedInformation(app, page, this.tag, this.PASSWORD_HEADER, exportedEntry[this.PASSWORD_HEADER], this.PASSWORD_HIDDEN_TEXT);    
+        
+        this.WEBSITE_HEADER = passEntryConfig.website.value;
+        this.LINK_ID = "link";
+        this.LINK_CLASS = "entry-website-link";
     }
 
     create() {
@@ -397,11 +413,26 @@ class MainPassEntryRow extends Component {
             let entryColElement = document.createElement("div");
             entryColElement.id = this.tag + "-" + header; //Eg. Google-Tag
             entryColElement.classList.add(this.ENTRY_COL_CLASS);
+            
             if(header === this.PASSWORD_HEADER) {
                 entryColElement.appendChild(this.passwordEncryptedInformation.create());
+            } else if (header === this.WEBSITE_HEADER && content) {
+                if(content.match(this.app.WEBSITE_REGEXP)) {
+                    let address = content;
+                    let link = document.createElement("a");
+                    link.href = "//" + content; //stops from appending onto current url
+                    link.id = this.tag + "-" + this.LINK_ID; //Eg. Google-link
+                    link.target = "_blank";
+                    link.classList.add(this.LINK_CLASS);
+                    link.innerHTML = address;
+                    entryColElement.appendChild(link);
+                } else {
+                    entryColElement.innerHTML = content;
+                }
             } else {
                 entryColElement.innerHTML = content ? content : this.EMPTY_FIELD_TEXT;
             }
+
             element.appendChild(entryColElement);
         })
         return element;
@@ -415,7 +446,7 @@ class MainPassEntryRow extends Component {
 class MainHeaderRow extends Component {
     constructor(app, page) {
         super("id", "main-entry-header-row", page, app);
-        this.tableHeaders = Object.keys(new PassEntry().export(true));
+        this.tableHeaders = Object.keys(this.config.EntryConfig.forTableFields);
 
         this.HEADER_ROW_CLASS = "header-row";
         this.ENTRY_ROW_CLASSES = "h hv-c vh-c entry-row".split(" ");
@@ -644,14 +675,16 @@ class EditTextArea extends Component {
 class EditView extends Component {
     constructor(app, page) {
         super("id", "edit-view", page, app);
-        this.passEntryDefaults = Object.entries(new PassEntry().export(false));
+
+        this.config = app.passManager.config;
 
         this.inputs = {}
-        this.passEntryDefaults.forEach(field => {
-            if(Array.isArray(field[1])) {
-                this.inputs[field[0]] = new EditTextArea(app, page, field[0]);
+        let passEntryConfig = this.config.EntryConfig;
+        passEntryConfig.allFields.forEach(field => {
+            if(passEntryConfig[field].isArray) {
+                this.inputs[field] = new EditTextArea(app, page, field);
             } else {
-                this.inputs[field[0]] = new EditTextInput(app, page, field[0]);
+                this.inputs[field] = new EditTextInput(app, page, field);
             }
         })
         this.inputs.password.setInputType("password");
@@ -710,25 +743,26 @@ class EditView extends Component {
 
     setup() {
         this.cancelButton.addEventListener(["click"], function() {
-            this.app.goToMainPage(this.page);
+            this.app.goToMainPage(this.page, false);
         }.bind(this));
 
         this.confirmButton.addEventListener(["click"], function() {
             let entry = this.convertInputValuesToEditPageEntry();
             this.validateValues(entry);
-            this.app.confirmEditPageEntry(entry);
+            this.app.confirmEditPageEntry(entry, this.page);
         }.bind(this));
     }
 
     convertInputValuesToEditPageEntry() {
         let out = {};
-        this.passEntryDefaults.forEach(field => {
-            let value = this.inputs[field[0]].getElement().value;
+        let passEntryConfig = this.config.EntryConfig;
+        passEntryConfig.allFields.forEach(field => {
+            let value = this.inputs[field].getElement().value;
             if(value){
-                if(Array.isArray(field[1])) {
+                if(passEntryConfig[field].isArray) {
                     value = value.split("\n");
                 }
-                out[field[0]] = value;
+                out[field] = value;
             }
         })
         return out;
@@ -740,6 +774,12 @@ class EditView extends Component {
         }
         if(this.app.passManager.entryAlreadyExistsWithTag(entry.tag)) {
             throw new Error("Entry cannot have same tag as existing entries");
+        }
+        if(entry.website) {
+            if(!entry.website.match(this.app.WEBSITE_REGEXP)) {
+                console.log(entry.website);
+                throw new Error("Website must have a valid website");
+            }
         }
     }
 

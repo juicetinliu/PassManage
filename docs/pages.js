@@ -49,7 +49,7 @@ class IntroPage extends Page {
 
     setup() {
         this.startNewButton.addEventListener(["click"], function() {
-            this.app.goToMainPage();
+            this.app.goToMainPage(this, false);
         }.bind(this));
 
         this.fromFileButton.addEventListener(["click"], function() {
@@ -139,9 +139,9 @@ class MainPage extends Page {
         mainContent.style.width = is_mobile_or_tablet_view() ? "60vw" : "800px";
     }
 
-    show() {
+    show(update) {
         super.show();
-        this.updateMainTableEntries();
+        if(update) this.updateMainTableEntries();
         this.components.mainOptionsBar.show();
     }
 
@@ -152,6 +152,7 @@ class MainPage extends Page {
 
     create() {
         super.create();
+
         // let testEntryStrings = ['Fb[|]website[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
         // let e = this.app.passManager.entriesFromStrings(testEntryStrings);
         // this.app.passManager.setEntries(e);

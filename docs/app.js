@@ -21,8 +21,11 @@ class App {
         this.rawPassFile = null;
         this.passFile = null;
 
-        this.PROCESS_DELAY_MS = 1000; //for tests
+        this.PROCESS_DELAY_MS = 400; //for tests
         this.DOWNLOAD_FILE_NAME = "pass.txt"
+        
+        // URL Regex https://regexr.com/3e6m0
+        this.WEBSITE_REGEXP = /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
     }
 
     run() {
@@ -77,37 +80,36 @@ class App {
         
         fr.onload = function() {
             this.mainLoading.show();
-            setTimeout(function() {
-                let passFile = new PassFile(fr.result);
 
-                if(passFile.isEncrypted()) {
-                    try {
-                        passFile.decryptFileAndProcess(this.appToken);
-                    } catch (e) {
-                        console.log("Something went wrong with decrypting passFile")
-                        console.log(e);
-                        this.rawPassFile = null;
-                        this.goToDropPage(referringPage); //go back to drop page;
-                        return;
-                    }
-                }
+            let passFile = new PassFile(fr.result);
 
-                this.passFile = passFile;
-
-                this.passManager.saveSecrets(this.passFile.getFirst(), this.passFile.getLast());
-
+            if(passFile.isEncrypted()) {
                 try {
-                    this.passManager.setEntries(this.passManager.entriesFromStrings(this.passFile.getRawEntries()));
+                    passFile.decryptFileAndProcess(this.appToken);
                 } catch (e) {
-                    console.log("Something went wrong with parsing passFile")
+                    console.log("Something went wrong with decrypting passFile")
                     console.log(e);
                     this.rawPassFile = null;
                     this.goToDropPage(referringPage); //go back to drop page;
                     return;
                 }
+            }
 
-                this.goToLoginPage(referringPage);
-            }.bind(this), this.PROCESS_DELAY_MS);
+            this.passFile = passFile;
+
+            this.passManager.saveSecrets(this.passFile.getFirst(), this.passFile.getLast());
+
+            try {
+                this.passManager.setEntries(this.passManager.entriesFromStrings(this.passFile.getRawEntries()));
+            } catch (e) {
+                console.log("Something went wrong with parsing passFile")
+                console.log(e);
+                this.rawPassFile = null;
+                this.goToDropPage(referringPage); //go back to drop page;
+                return;
+            }
+
+            this.goToLoginPage(referringPage);
         }.bind(this);
     }
 
@@ -152,20 +154,51 @@ class App {
             }
             throw e;
         }
-        this.pages.MainPage.updateMainTableEntries();
         this.goToMainPage(referringPage);
     }
 
-    confirmEditPageEntry(entry) {
+    confirmEditPageEntry(entry, referringPage) {
+        this.pages.EditPage.setReferringPage(referringPage);
         this.pages.EditPage.confirmEditEntry(entry);
     }
 
-    async decryptPassEntryPassword(p) {
-        return await this.passManager.decryptPassEntryField("password", p);
+    async decryptPassEntryPassword(p, referringPage, component) {
+        let decryptedPassword;
+        try {
+            decryptedPassword = await this.passManager.decryptPassEntryField("password", p); //wait for web worker completion
+        } catch (e) {
+            if(e instanceof AppError) {
+                if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
+                    let callBackAfterLogin = async (refPage) => {
+                        component.toggleButton.getElement().click();
+                        this.goToMainPage(refPage, false);
+                    };
+                    this.goToLoginPage(referringPage, callBackAfterLogin);
+                    throw new AppError("Redirecting to login before decrypting", AppErrorType.MISSING_MASTER_PASSWORD);
+                }
+            }
+            throw e;
+        }
+        return decryptedPassword;
     }
 
-    async decryptPassEntrySecrets(s) {
-        return await this.passManager.decryptPassEntryField("secrets", s);
+    async decryptPassEntrySecrets(s, referringPage) {
+        let decryptedSecrets;
+        try {
+            decryptedSecrets = await this.passManager.decryptPassEntryField("secrets", s); //wait for web worker completion
+        } catch (e) {
+            if(e instanceof AppError) {
+                if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
+                    let callBackAfterLogin = async (refPage) => {
+                        await this.decryptPassEntrySecrets(p, refPage);
+                    };
+                    this.goToLoginPage(referringPage, callBackAfterLogin);
+                    return;
+                }
+            }
+            throw e;
+        }
+        return decryptedSecrets;
     }
 
     goToEditPage(action, referringPage) {
@@ -174,8 +207,8 @@ class App {
         this.pages.EditPage.setReferringPage(referringPage);
     }
 
-    goToMainPage(referringPage) {
-        this.pages.MainPage.show();
+    goToMainPage(referringPage, update = true) {
+        this.pages.MainPage.show(update);
         this.pages.EditPage.setReferringPage(referringPage);
     }
 

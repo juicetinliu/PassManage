@@ -2,20 +2,21 @@
 //https://cryptojs.gitbook.io/docs/
 //https://www.youtube.com/watch?v=KQjf9get6PE
 const PassEntryConfig = {
-    tag: {isEncrypted: false, isArray: false}, 
-    website: {isEncrypted: false, isArray: false}, 
-    username: {isEncrypted: false, isArray: false}, 
-    email: {isEncrypted: false, isArray: false}, 
-    altEmail: {isEncrypted: false, isArray: false}, 
-    password: {isEncrypted: true, isArray: false}, 
-    secrets: {isEncrypted: true, isArray: true}, 
-    hints: {isEncrypted: false, isArray: true}, 
-    comments: {isEncrypted: false, isArray: true},
+    tag:        {value: "tag",      isEncrypted: false, isArray: false}, 
+    website:    {value: "website",  isEncrypted: false, isArray: false}, 
+    username:   {value: "username", isEncrypted: false, isArray: false}, 
+    email:      {value: "email",    isEncrypted: false, isArray: false}, 
+    altEmail:   {value: "altEmail", isEncrypted: false, isArray: false}, 
+    password:   {value: "password", isEncrypted: true,  isArray: false}, 
+    secrets:    {value: "secrets",  isEncrypted: true,  isArray: true}, 
+    hints:      {value: "hints",    isEncrypted: false, isArray: true}, 
+    comments:   {value: "comments", isEncrypted: false, isArray: true},
     
     allFields: ["tag", "website", "username", "email", "altEmail", "password", "secrets", "hints", "comments"],
-    processForTableFields: {
-        tag: (e) => e.tag,
-        website: (e) => e.website,
+
+    forTableFields: {
+        tag:      (e) => e.tag,
+        website:  (e) => e.website,
         username: (e) => e.username ? e.username : e.email,
         password: (e) => e.password
     }
@@ -45,7 +46,7 @@ class PassEntry {
     export(forTableView = true) {
         let out = {};
         if(forTableView) { //just return useful entries
-            Object.entries(this.config.EntryConfig.processForTableFields)
+            Object.entries(this.config.EntryConfig.forTableFields)
                 .forEach(process => {
                     out[process[0]] = process[1](this); //apply anonymous function in config
                 });
