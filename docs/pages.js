@@ -69,7 +69,7 @@ class EditPage extends Page {
         this.editContent = new Element("id", "edit-content");
 
         this.components = {
-            editView: new EditView(app)
+            editView: new EditView(app, this)
         }
 
         this.actionTypes = {
@@ -123,12 +123,13 @@ class MainPage extends Page {
 
         this.mainContent = new Element("id", "main-content");
 
+        this.mainOptionsBar = new Element("id", "main-page-options");
+
         this.components = {
-            mainOptionsBar: new MainOptionsBar(app),
-            mainSearchOption: new MainOptionsSearch(app),
-            mainDownloadButton: new MainOptionsDownload(app),
-            // include edit button
-            mainTable: new MainTable(app)
+            mainSearchInput: new MainOptionsSearch(app, this),
+            mainEditButton: new MainOptionsEdit(app, this),
+            mainDownloadButton: new MainOptionsDownload(app, this),
+            mainTable: new MainTable(app, this)
         }
     }
 
@@ -141,34 +142,40 @@ class MainPage extends Page {
 
     show(update) {
         super.show();
-        if(update) this.updateMainTableEntries();
-        this.components.mainOptionsBar.show();
+        if(update) this._updateMainTableEntries();
+        this.mainOptionsBar.show();
     }
 
     hide() {
-        this.components.mainOptionsBar.hide();
+        this.mainOptionsBar.hide();
         super.hide();
     }
 
     create() {
         super.create();
 
-        // let testEntryStrings = ['Fb[|]website[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
-        // let e = this.app.passManager.entriesFromStrings(testEntryStrings);
-        // this.app.passManager.setEntries(e);
-
         let entries = this.app.getPassManagerEntries();
 
-        this.createMainTable(entries);
+        this._createOptionsBar();
+        this._createMainTable(entries);
     }
 
-    createMainTable(entries) {
+    _createOptionsBar() {
+        let search = this.components.mainSearchInput.create();
+        let download = this.components.mainDownloadButton.create();
+        let edit = this.components.mainEditButton.create();
+        this.mainOptionsBar.appendChild(search);
+        this.mainOptionsBar.appendChild(edit);
+        this.mainOptionsBar.appendChild(download);
+    }
+
+    _createMainTable(entries) {
         let table = this.components.mainTable.create(entries);
 
         this.mainContent.appendChild(table);
     }
 
-    updateMainTableEntries() {
+    _updateMainTableEntries() {
         let entries = this.app.getPassManagerEntries();
         this.components.mainTable.updateEntries(entries);
     }
@@ -178,9 +185,12 @@ class LoginPage extends Page {
     constructor(app) {
         super("login-page", app);
 
-        this.inputUsername = new Element("id", "input-user");
+        this.loginContent = new Element("id", "login-content");
+
         this.inputPassword = new Element("id", "input-password");
-        this.submitUserPasswordButton = new Element("id", "submit-user-password");
+        
+        this.submitUserPasswordButton = new IconButton(app, this, "submit-user-password-button", "arrow_forward");
+
         this.callBackAfterLogin = null;
     }
 
@@ -189,11 +199,12 @@ class LoginPage extends Page {
     }
 
     setup() {
+        super.setup();
         this.inputPassword.addEventListener(["input"], function() {
             if(this.inputPassword.getElement().value) {
-                this.submitUserPasswordButton.show();
+                this.submitUserPasswordButton.enable();
             }else{
-                this.submitUserPasswordButton.hide();
+                this.submitUserPasswordButton.disable();
             }
         }.bind(this));
         
@@ -213,9 +224,16 @@ class LoginPage extends Page {
         }.bind(this));
     }
 
+    create() {
+        super.create();
+        let button = this.submitUserPasswordButton.create();
+        this.loginContent.appendChild(button);
+    }
+
     show() {
         super.show();
-        this.submitUserPasswordButton.hide();
+        this.inputPassword.getElement().focus();
+        this.submitUserPasswordButton.disable();
     }
 
     _savePasswordToApp(p) {
@@ -339,7 +357,6 @@ class DropPage extends Page {
     //https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
     _dropZoneDropHandler(event) {
         event.preventDefault();
-        console.log(event);
         if (event.dataTransfer.items) {
             if (!event.dataTransfer.items.length || event.dataTransfer.items.length > 1) { //only 1 file allowed
                 return;

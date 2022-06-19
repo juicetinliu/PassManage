@@ -126,8 +126,8 @@ class PassManager {
 
         this.config = config;
 
-        this.CACHED_MASTER_KEY = null; //Temporarily stored for 5 minutes
-        this.CACHE_MASTER_KEY_DURATION_MS = 5 * 60 * 1000; 
+        this.CACHED_MASTER_KEY = null; 
+        this.CACHE_MASTER_KEY_DURATION_MS = 5 * 60 * 1000; //Temporarily stored for 5 minutes
         this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = null;
 
         this._generateSecrets(); //will be overwritten if passFile is uploaded
@@ -269,7 +269,7 @@ class PassManager {
 
         if(entryConfig[field].isArray) {
             console.log(out); 
-            // WILL NEED TO SPLIT
+            // WILL NEED TO PROCESS
         }
         return out;
     }

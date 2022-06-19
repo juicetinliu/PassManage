@@ -21,7 +21,6 @@ class App {
         this.rawPassFile = null;
         this.passFile = null;
 
-        this.PROCESS_DELAY_MS = 400; //for tests
         this.DOWNLOAD_FILE_NAME = "pass.txt"
         
         // URL Regex https://regexr.com/3e6m0
@@ -43,6 +42,16 @@ class App {
         // this.pages.LoginPage.show();
         // this.pages.MainPage.show();
         // this.pages.EditPage.show();
+        // this.___FOR_DEBUGGING_MAIN_PAGE();
+    }
+
+    ___FOR_DEBUGGING_MAIN_PAGE() {
+        // FOR DEBUGGING
+        let testEntryStrings = ['Fb[|]website[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
+        let e = this.passManager.entriesFromStrings(testEntryStrings);
+        this.passManager.setEntries(e);
+
+        this.goToMainPage(null);
     }
 
     getPassManagerEntries() {
@@ -58,15 +67,14 @@ class App {
     savePasswordToPassManager(pw, referringPage, callBack) {
         this.hideAllPages();
         this.mainLoading.show();
-        setTimeout(function() {
-            this.passManager.saveMasterPasswordToHash(pw);
 
-            if(callBack) { //callback after saving password 
-                callBack(referringPage);
-            } else {
-                this.goToMainPage(referringPage);
-            }
-        }.bind(this), this.PROCESS_DELAY_MS);
+        this.passManager.saveMasterPasswordToHash(pw);
+
+        if(callBack) { //callback after saving password 
+            callBack(referringPage);
+        } else {
+            this.goToMainPage(referringPage);
+        }
     }
 
     extractRawPassFile(referringPage) {
@@ -102,7 +110,7 @@ class App {
             try {
                 this.passManager.setEntries(this.passManager.entriesFromStrings(this.passFile.getRawEntries()));
             } catch (e) {
-                console.log("Something went wrong with parsing passFile")
+                console.log("Something went wrong with parsing passFile");
                 console.log(e);
                 this.rawPassFile = null;
                 this.goToDropPage(referringPage); //go back to drop page;
@@ -209,7 +217,7 @@ class App {
 
     goToMainPage(referringPage, update = true) {
         this.pages.MainPage.show(update);
-        this.pages.EditPage.setReferringPage(referringPage);
+        this.pages.MainPage.setReferringPage(referringPage);
     }
 
     goToDropPage(referringPage) {

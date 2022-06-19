@@ -3,7 +3,7 @@ const HtmlTypes = {
     ID: "ID"
 };
 
-class Element { //exists in HTML
+class Element { //Any element that exists in HTML
     constructor(type, label) {
         this.type = this.getType(type);
         this.label = label;
@@ -134,7 +134,7 @@ class Element { //exists in HTML
     }
 }
 
-class Component extends Element{ //reusable & created elements
+class Component extends Element{ //reusable, functional, and created elements
     constructor(type, label, page, app) {
         super(type, label);
         this.app = app;
@@ -149,12 +149,6 @@ class Component extends Element{ //reusable & created elements
 
     setup() {
     } //any event listeners
-}
-
-class MainOptionsBar extends Component {
-    constructor(app, page) {
-        super("id", "main-page-options", page, app);
-    }
 }
 
 class MainRowDivider extends Component {
@@ -184,58 +178,100 @@ class MainHeaderRowDivider extends Component {
 }
 
 class Button extends Component {
-    constructor(app, page) {
-        super("class", "butt", page, app);
+    constructor(app, page, id) {
+        super("id", id, page, app);
+        this.disabled = false;
+        this.BUTTON_CLASS = "butt";
     }
 
     create() {
         let element = document.createElement("button");
-        element.classList.add(this.label);
+        element.id = this.label;
+        element.classList.add(this.BUTTON_CLASS);
+        super.create();
         return element;
     }
 }
 
 class MaterialIcon extends Component {
-    constructor(app, page, iconName) {
-        super("class", "material-symbols-rounded", page, app);
+    constructor(app, page, id, iconName) {
+        super("id", id + "-icon", page, app);
         this.iconName = iconName;
+        this.disabled = false;
+        this.ICON_CLASS = "material-symbols-rounded";
+        this.DISABLED_ICON_CLASS = "material-symbols-rounded-disabled";
     }
 
     create() {
         let element = document.createElement("span");
-        element.classList.add(this.label);
+        element.id = this.label;
+        element.classList.add(this.ICON_CLASS);
+        if(this.disabled) element.classList.add(this.DISABLED_ICON_CLASS); 
         element.innerHTML = this.iconName;
+        super.create();
         return element;
+    }
+
+    disable() {
+        this.disabled = true;
+        this.getElement().classList.add(this.DISABLED_ICON_CLASS);
+    }
+
+    enable() {
+        this.disabled = false;
+        this.getElement().classList.remove(this.DISABLED_ICON_CLASS);
+    }
+
+    setIcon(iconName) {
+        this.iconName = iconName;
+        if(this.exists()) this.getElement().innerHTML = iconName;
     }
 }
 
-class IconButton extends Component {
+class IconButton extends Button {
     constructor(app, page, id, iconName) {
-        super("id", id, page, app);
+        super(app, page, id);
+        this.icon = new MaterialIcon(this.app, this.page, this.label, iconName);
+        this.disabled = false;
         this.MAIN_BUTTON_CLASS = "butt-main";
-        this.iconName = iconName;
+        this.MAIN_BUTTON_DISABLED_CLASS = "butt-main-disabled";
     }
 
     create() {
-        let element = new Button(this.app, this.page).create();
-        element.id = this.label;
+        let element = super.create();
         element.classList.add(this.MAIN_BUTTON_CLASS);
+        if(this.disabled) element.classList.add(this.MAIN_BUTTON_DISABLED_CLASS); 
 
-        let icon = new MaterialIcon(this.app, this.page, this.iconName).create();
+        let icon = this.icon.create();
         element.appendChild(icon);
         return element;
     }
 
-    setIconName(iconName) {
-        this.iconName = iconName;
+    disable() {
+        this.disabled = true;
+        this.getElement().classList.add(this.MAIN_BUTTON_DISABLED_CLASS);
+        this.getElement().disabled = true;
+        this.icon.disable();
+    }
+
+    enable() {
+        this.disabled = false;
+        this.getElement().classList.remove(this.MAIN_BUTTON_DISABLED_CLASS);
+        this.getElement().disabled = false;
+        this.icon.enable();
+    }
+
+    setIcon(iconName) {
+        this.icon.setIcon(iconName);
     }
 }
 
 class EncryptedInformationToggleButton extends IconButton {
-    constructor(app, page, tag, infoComponent){
-        super(app, page, "encrypted-info-toggle-button-" + tag, "visibility");
-        this.infoComponent = infoComponent;
-        this.toggleIconName = "visibility_off";
+    constructor(app, page, tag){
+        super(app, page, "encrypted-info-toggle-button-" + tag, "visibility_off");
+        this.DECRYPTED_ICON_NAME = "visibility";
+        this.ENCRYPTED_ICON_NAME = "visibility_off";
+        this.visible = false;
 
         this.CLASS = 'encrypted-info-toggle-button';
     }
@@ -245,6 +281,11 @@ class EncryptedInformationToggleButton extends IconButton {
         element.classList.add(this.CLASS);
         
         return element;
+    }
+
+    toggleVisiblity(visible) {
+        this.visible = visible;
+        this.setIcon(visible ? this.ENCRYPTED_ICON_NAME : this.DECRYPTED_ICON_NAME);
     }
 }
 
@@ -281,7 +322,7 @@ class EncryptedInformation extends Component {
         this.INFO_TEXT_CLASS = "encrypted-info-text-" + passEntryField;
 
         if(info) {
-            this.toggleButton = new EncryptedInformationToggleButton(app, page, tag, this);
+            this.toggleButton = new EncryptedInformationToggleButton(app, page, tag);
         }
         
         this.encryptedInfoTextContent = new Element("id", "encrypted-info-text-content-" + passEntryField + "-" + tag);
@@ -332,6 +373,7 @@ class EncryptedInformation extends Component {
 
         this.toggleButton.addEventListener(['click'], async function() {
             this.encrypted = !this.encrypted;
+            this.toggleButton.toggleVisiblity(this.encrypted);
             this.encryptedInfoText.getElement().innerHTML = "";
             this.loader.show();
 
@@ -472,21 +514,14 @@ class MainHeaderRow extends Component {
     }
 }
 
-class AddPassEntryButton extends IconButton {
-    constructor(app, page) {
-        super(app, page, "add-new-pass-entry-button", "playlist_add");
-    }
-}
-
 class MainTable extends Component {
     constructor(app, page) {
         super("id", "main-table", page, app);
 
         this.headerRow = new MainHeaderRow(app, page);
         this.headerRowDivider = new MainHeaderRowDivider(app, page);
-        this.dividers = new MainRowDivider(app, page);
-        this.addPassEntryButton = new AddPassEntryButton(app, page);
         this.passEntryRows = [];
+        this.dividers = new MainRowDivider(app, page);
 
         this.ENTRY_TABLE_CLASSES = "v hv-l vh-c entry-table".split(" ");
 
@@ -497,40 +532,24 @@ class MainTable extends Component {
 
         this.NO_ENTRIES_MESSAGE = "No entries to show";
         this.NO_ENTRIES_ADD_ICON_NAME = "add";
+        this.ENTRIES_ADD_ICON_NAME = "playlist_add";
+        
+        this.addPassEntryButton = new IconButton(app, page, "add-new-pass-entry-button", this.NO_ENTRIES_ADD_ICON_NAME);
     }
 
     updateEntries(entries = []) {
         if(!this.created) {
             this.create(entries);
         } else {
-            this.addPassEntryButton.delete();
-            this.addPassEntryButton = new AddPassEntryButton(this.app, this.page);
-
             let entryContent = new Element("id", this.MAIN_TABLE_ENTRY_CONTENT_ID);
             entryContent.removeChildren();
 
-            this.setPassEntryRows(entries);
-            if(this.passEntryRows.length > 0){
-                this.passEntryRows.forEach(row => {
-                    let passEntryRow = row.create();
-                    entryContent.appendChild(passEntryRow);
-                    entryContent.appendChild(this.dividers.create());
-                })
-            } else {
-                this.addPassEntryButton.setIconName(this.NO_ENTRIES_ADD_ICON_NAME);
-                entryContent.getElement().innerHTML = this.NO_ENTRIES_MESSAGE;
-            }
-    
-            let footerContent = new Element("id", this.MAIN_TABLE_FOOTER_CONTENT_ID);
-            footerContent.appendChild(this.addPassEntryButton.create());
+            this._populateEntryContent(entryContent.getElement(), entries);
         }
-        
-        this.setup();
+        this._setupPassEntryRows();
     }
 
     create(entries = []) {
-        this.setPassEntryRows(entries);
-
         let element = document.createElement("div");
         element.id = this.label;
         this.ENTRY_TABLE_CLASSES.forEach(c => element.classList.add(c));
@@ -550,22 +569,15 @@ class MainTable extends Component {
         entryContent.id = this.MAIN_TABLE_ENTRY_CONTENT_ID;
         this.TABLE_CONTENT_CLASSES.forEach(c => entryContent.classList.add(c));
 
-        if(this.passEntryRows.length > 0){
-            this.passEntryRows.forEach(row => {
-                let passEntryRow = row.create();
-                entryContent.appendChild(passEntryRow);
-                entryContent.appendChild(this.dividers.create());
-            })
-        } else {
-            this.addPassEntryButton.setIconName(this.NO_ENTRIES_ADD_ICON_NAME);
-            entryContent.innerHTML = this.NO_ENTRIES_MESSAGE;
-        }
+        let addPassEntryButton = this.addPassEntryButton.create();
+        
+        this._populateEntryContent(entryContent, entries);
 
         let footerContent = document.createElement("div");
         footerContent.id = this.MAIN_TABLE_FOOTER_CONTENT_ID;
         this.TABLE_CONTENT_CLASSES.forEach(c => footerContent.classList.add(c));
 
-        footerContent.appendChild(this.addPassEntryButton.create());
+        footerContent.appendChild(addPassEntryButton);
 
         element.appendChild(headerContent);
         element.appendChild(entryContent);
@@ -575,7 +587,26 @@ class MainTable extends Component {
         return element;
     }
 
-    setPassEntryRows(entries) {
+    _populateEntryContent(entryContentElement, entries) {
+        this._setPassEntryRows(entries);
+        if(this.passEntryRows.length > 0){
+            this.passEntryRows.forEach(row => {
+                let passEntryRow = row.create();
+                entryContentElement.appendChild(passEntryRow);
+                entryContentElement.appendChild(this.dividers.create());
+            });
+            this.addPassEntryButton.setIcon(this.ENTRIES_ADD_ICON_NAME);
+            this.page.components.mainDownloadButton.enable();
+            this.page.components.mainEditButton.enable();
+        } else {
+            this.addPassEntryButton.setIcon(this.NO_ENTRIES_ADD_ICON_NAME);
+            entryContentElement.innerHTML = this.NO_ENTRIES_MESSAGE;
+            this.page.components.mainDownloadButton.disable();
+            this.page.components.mainEditButton.disable();
+        }
+    }
+
+    _setPassEntryRows(entries) {
         this.passEntryRows = [];
         entries.forEach(e => {
             this.passEntryRows.push(new MainPassEntryRow(this.app, this.page, e));
@@ -583,29 +614,117 @@ class MainTable extends Component {
     }
 
     setup() {
-        this.setupAddPassEntryButton();
+        this._setupAddPassEntryButton();
+        this._setupPassEntryRows();
+    }
+
+    _setupPassEntryRows() {
         this.passEntryRows.forEach(r => {
             r.setup();
         })
     }
 
-    setupAddPassEntryButton() {
+    _setupAddPassEntryButton() {
         this.addPassEntryButton.addEventListener(["click"], function() {
             this.app.goToEditPage("add", this.page);
         }.bind(this));
     }
 }
 
-class MainOptionsSearch extends Component {
+class MainOptionsEdit extends Component {
     constructor(app, page) {
-        super("id", "main-page-option-search", page, app);
+        super("id", "main-page-option-edit", page, app);
+        this.button = new IconButton(app, page, "main-page-option-edit-button", "edit_note");
     }
 
     create() {
+        let element = document.createElement("div");
+        element.id = this.label;
+        element.appendChild(this.button.create());
+
+        return element;
     }
 
     setup() {
+        this.button.addEventListener(["click"], function() {
+            console.log("EDITING MODE TOGGLE");
+        }.bind(this));
+    }
 
+    disable() {
+        this.button.disable();
+    }
+
+    enable() {
+        this.button.enable();
+    }
+}
+
+class MainOptionsSearch extends Component {
+    constructor(app, page) {
+        super("id", "main-page-option-search", page, app);
+
+        this.inputLabel = "input-search"
+        this.input = new Element("id", this.inputLabel);
+        this.icon = new MaterialIcon(app, page, this.inputLabel, "search");
+        
+        this.SEARCH_PANEL_CLASSES = "p p-out p-round".split(" ");
+        this.SEARCH_PLACEHOLDER_TEXT_OPTIONS = ["Search for anything...", "Search for something...", "What are you looking for?", "Type something to search...", "What do you want?", "Finding something?"];
+        this.TEXT_INPUT_CLASS = "text-input";
+        this.INPUT_SEARCH_FOCUS_CLASS = "input-search-focus";
+        this.ICON_DISABLED_CLASS = "input-search-icon-disabled";
+        this.inputType = "text";
+    }
+
+    create() {
+        let element = document.createElement("div");
+        this.SEARCH_PANEL_CLASSES.forEach(c => element.classList.add(c));
+        element.id = this.label;
+
+        let icon = this.icon.create();
+
+        let input = document.createElement("input");
+        input.id = this.inputLabel;
+        input.type = this.inputType;
+        input.classList.add(this.TEXT_INPUT_CLASS);
+        input.name = this.inputLabel;
+        
+        element.appendChild(icon);
+        element.appendChild(input);
+
+        return element;
+    }
+
+    setup() {
+        this.input.addEventListener(["focus"], function() {
+            this._toggleSearchFocus(true);
+        }.bind(this));
+
+        this.input.addEventListener(["focusout"], function() {
+            this._toggleSearchFocus(false);
+        }.bind(this));
+    }
+
+    _toggleSearchFocus(focusIn) {
+        this.input.getElement().placeholder = focusIn ? this._getRandomSearchPlaceholder() : "";
+        if(focusIn) {
+            this.icon.getElement().classList.add(this.ICON_DISABLED_CLASS);
+            this.input.getElement().style.width = "250px";
+        } else {
+            if(!this.getSearchValue()) {
+                this.icon.getElement().classList.remove(this.ICON_DISABLED_CLASS);
+                this.input.getElement().style.width = "150px";
+            }
+        }
+    }
+
+    getSearchValue() {
+        return this.input.getElement().value;
+    }
+
+    _getRandomSearchPlaceholder() {
+        let ind = Math.floor(Math.random() * this.SEARCH_PLACEHOLDER_TEXT_OPTIONS.length);
+        return this.SEARCH_PLACEHOLDER_TEXT_OPTIONS[ind];
     }
 }
 
@@ -618,7 +737,6 @@ class MainOptionsDownload extends Component {
     create() {
         let element = document.createElement("div");
         element.id = this.label;
-        
         element.appendChild(this.button.create());
 
         return element;
@@ -628,6 +746,14 @@ class MainOptionsDownload extends Component {
         this.button.addEventListener(["click"], function() {
             this.app.downloadPassFile();
         }.bind(this));
+    }
+
+    disable() {
+        this.button.disable();
+    }
+
+    enable() {
+        this.button.enable();
     }
 }
 
@@ -642,9 +768,9 @@ class EditTextInput extends Component {
     create() {
         let element = document.createElement("input");
         element.id = this.label;
-        element.setAttribute("type", this.inputType);
+        element.type = this.inputType;
         element.classList.add(this.TEXT_INPUT_CLASS);
-        element.setAttribute("name", this.label);
+        element.name = this.label;
 
         return element;
     }
@@ -666,7 +792,7 @@ class EditTextArea extends Component {
         let element = document.createElement("textarea");
         element.id = this.label;
         element.classList.add(this.TEXT_AREA_CLASS);
-        element.setAttribute("name", this.label);
+        element.name = this.label;
 
         return element;
     }

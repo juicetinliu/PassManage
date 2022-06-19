@@ -16,7 +16,8 @@
     --highlight-red: #ea5656;
     --green: #2fa745;
     --highlight-green: #62cd76;
-    
+    --disabled-button: #494949;
+    --disabled-text-color: #868686;
 }
 
 .light-mode {
@@ -26,12 +27,14 @@
     --not-too-white: #fafafa;
     --background-white: #e5e5e5;
     --text-color: #000000;
-    --light-shadow: rgba(255,255,255,0.5);
-    --dark-shadow: rgba(70,70,70,0.12);
+    --light-shadow: rgba(255, 255, 255, 0.575);
+    --dark-shadow: rgba(60, 60, 60, 0.12);
     --red: #f88484;
     --highlight-red: #ce4b4b;
     --green: #95ec94;
     --highlight-green: #6ec46c;
+    --disabled-button: #dbdbdb;
+    --disabled-text-color: #828282;
 }
 
 html, body {
@@ -55,8 +58,19 @@ body {
     transition: max-height 1s ease-in-out 0s, max-width 1s ease-in-out 0.1s;
 }
 
+/* https://stackoverflow.com/questions/2310734/how-to-make-html-text-unselectable */
 .material-symbols-rounded {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
     color: var(--text-color);
+}
+
+.material-symbols-rounded-disabled {
+    color: var(--disabled-text-color) !important;
 }
 
 .text-input {
@@ -64,6 +78,7 @@ body {
     border-radius: 5px;
     background-color: var(--not-too-white);
     color: var(--text-color);
+    width: 150px;
     transition: border-color 1s;
 }
 
@@ -148,7 +163,7 @@ body {
     align-items: center;
     margin: 15px;
     padding: 5px;
-    transition: background-color 1s;
+    transition: background-color 1s, box-shadow 1s;
     border: none;
 }
 
@@ -156,6 +171,11 @@ body {
     background-color: var(--highlight-blue);
 }
 
+.butt-main-disabled {
+    background-color: var(--disabled-button) !important;
+    box-shadow: none !important;
+    pointer-events: none;
+}
 
 .butt-main:hover {
     background-color: var(--action-blue);
@@ -180,6 +200,10 @@ body {
     gap: 10px;
 }
 
+/* Login page styles */
+#submit-user-password-button {
+    margin: 0px 0px 0px 15px;
+}
 
 /* Drop page styles */
 #input-password-file {
@@ -270,10 +294,20 @@ body {
     justify-content: space-between;
 }
 
+#input-search {
+    transition: border-color 1s, width 0.3s;
+}
+
 #input-search-icon {
     position: absolute;
     top: 18px;
     left: 20px;
+    transition: opacity 0.3s, font-size 0.3s;
+}
+
+.input-search-icon-disabled {
+    opacity: 0;
+    font-size: 0 !important;
 }
 
 #main-page-option-search {
@@ -296,7 +330,7 @@ body {
     margin: 15px 10px;
 }
 
-/* main page table styles */
+/* Main page table styles */
 #main-table {
     width: 100%;
 }
@@ -342,6 +376,14 @@ body {
     word-break: break-word;
     flex-grow: 1;
     width: 10px; /*needed to calculate grow spacing*/
+}
+
+.entry-website-link {
+    color: var(--action-blue);
+}
+
+.entry-website-link:hover {
+    color: var(--highlight-blue);
 }
 
 .encrypted-info-toggle-button {
