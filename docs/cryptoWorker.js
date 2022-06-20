@@ -1,9 +1,10 @@
 importScripts('https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.js');
 importScripts('crypto.js');
 
-let completedJobsWithResult = [];
+let completedJobsWithResultCache = [];
 
 let debug = false;
+let CLEAR_CACHE_TIMEOUT_MS = 5 * 1000; //WORKER ONLY KEEPS RESULT FOR 5 SECONDS SINCE PASSMANAGER HAS ITS OWN CACHE (about the time it takes to calculate pbkdf2)
 
 onmessage = function(e) {
     let jobID = e.data[0]
@@ -17,7 +18,7 @@ onmessage = function(e) {
     };
 
     let cachedJobFound = false;
-    completedJobsWithResult.find(jobWithResult => {
+    completedJobsWithResultCache.find(jobWithResult => {
         if(areJobsEqual(thisJob, jobWithResult[0])) {
             if(debug) console.log(jobID, "Cached result found");
             cachedJobFound = true;
@@ -48,7 +49,12 @@ onmessage = function(e) {
 }
 
 function processResult(result, job) {
-    completedJobsWithResult.push([job, result]);
+    completedJobsWithResultCache.push([job, result]);
+
+    setTimeout(function() {
+        completedJobsWithResultCache = [];
+    }, CLEAR_CACHE_TIMEOUT_MS);
+
     if(debug) console.log(job.id, "Sending result back");
 
     postMessage([job.id, result]); //submit job result to all listeners

@@ -635,6 +635,9 @@ class MainOptionsEdit extends Component {
     constructor(app, page) {
         super("id", "main-page-option-edit", page, app);
         this.button = new IconButton(app, page, "main-page-option-edit-button", "edit_note");
+
+        this.editing = false;
+        this.EDITING_MODE_BUTTON_CLASS = "main-page-option-edit-button-editing";
     }
 
     create() {
@@ -647,8 +650,17 @@ class MainOptionsEdit extends Component {
 
     setup() {
         this.button.addEventListener(["click"], function() {
-            console.log("EDITING MODE TOGGLE");
+            this.editing = !this.editing;
+            this.toggleEditing(this.editing);
         }.bind(this));
+    }
+
+    toggleEditing(editing) {
+        if(editing) {
+            this.button.getElement().classList.add(this.EDITING_MODE_BUTTON_CLASS);
+        } else {
+            this.button.getElement().classList.remove(this.EDITING_MODE_BUTTON_CLASS);
+        }
     }
 
     disable() {

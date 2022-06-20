@@ -326,6 +326,15 @@ body {
     margin: 15px 10px;
 }
 
+.main-page-option-edit-button-editing {
+    transition: background-color 1s;
+    box-shadow: inset 0px 0px 0px 3px var(--action-blue);
+}
+
+.main-page-option-edit-button-editing:hover {
+    background-color: var(--not-too-white);
+}
+
 #main-page-option-download-button {
     margin: 15px 10px;
 }
