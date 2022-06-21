@@ -3,6 +3,20 @@ const HtmlTypes = {
     ID: "ID"
 };
 
+//helper function to create element with id and class on one line
+function documentCreateElement(elementType, id = null, classes = null) {
+    let element = document.createElement(elementType);
+    if(id) element.id = id;
+    if(classes) {
+        if(Array.isArray(classes)) {
+            classes.forEach(c => element.classList.add(c));
+        } else {
+            element.classList.add(classes);
+        }
+    }
+    return element
+}
+
 class Element { //Any element that exists in HTML
     constructor(type, label) {
         this.type = this.getType(type);
@@ -157,8 +171,7 @@ class MainRowDivider extends Component {
     }
 
     create() {
-        let element = document.createElement("div");
-        element.classList.add(this.label);
+        let element = documentCreateElement("div", null, this.label);
         return element;
     }
 }
@@ -171,8 +184,7 @@ class MainHeaderRowDivider extends Component {
     }
 
     create() {
-        let element = document.createElement("div");
-        element.classList.add(this.label, this.DIVIDER_CLASS);
+        let element = documentCreateElement("div", null, [this.label, this.DIVIDER_CLASS]);
         return element;
     }
 }
@@ -185,9 +197,7 @@ class Button extends Component {
     }
 
     create() {
-        let element = document.createElement("button");
-        element.id = this.label;
-        element.classList.add(this.BUTTON_CLASS);
+        let element = documentCreateElement("button", this.label, this.BUTTON_CLASS);
         super.create();
         return element;
     }
@@ -203,9 +213,7 @@ class MaterialIcon extends Component {
     }
 
     create() {
-        let element = document.createElement("span");
-        element.id = this.label;
-        element.classList.add(this.ICON_CLASS);
+        let element = documentCreateElement("span", this.label, this.ICON_CLASS);
         if(this.disabled) element.classList.add(this.DISABLED_ICON_CLASS); 
         element.innerHTML = this.iconName;
         super.create();
@@ -292,18 +300,16 @@ class EncryptedInformationToggleButton extends IconButton {
 class SmallSquareLoader extends Component {
     constructor(app, page, id) {
         super("id", id, page, app);
-        this.SMALL_SQUARE_LOADER_CLASSES = "large-square-loader small-square-loader".split(" ");
+        this.SMALL_SQUARE_LOADER_CLASSES = "small-square-loader".split(" ");
     }
 
     create() {
-        let element = document.createElement("div");
-        element.id = this.label;
-        this.SMALL_SQUARE_LOADER_CLASSES.forEach(c => element.classList.add(c));
+        let element = documentCreateElement("div", this.label, this.SMALL_SQUARE_LOADER_CLASSES);
 
-        element.appendChild(document.createElement("div"));
-        element.appendChild(document.createElement("div"));
-        element.appendChild(document.createElement("div"));
-        element.appendChild(document.createElement("div"));
+        element.appendChild(documentCreateElement("div"));
+        element.appendChild(documentCreateElement("div"));
+        element.appendChild(documentCreateElement("div"));
+        element.appendChild(documentCreateElement("div"));
         
         return element;
     }
@@ -317,7 +323,9 @@ class EncryptedInformation extends Component {
         this.encryptedPlaceholderText = encryptedPlaceholderText;
         this.emptyFieldText = emptyFieldText;
 
-        this.CONTENT_CLASSES = "h hv-l vh-c".split(" ");
+
+        this.MAIN_CONTENT_CLASS = "encrypted-info-content-" + passEntryField;
+        this.CONTENT_CLASSES = (this.MAIN_CONTENT_CLASS + " h hv-l vh-c").split(" ");
         this.INFO_CONTENT_CLASS = "encrypted-info-text-content-" + passEntryField;
         this.INFO_TEXT_CLASS = "encrypted-info-text-" + passEntryField;
 
@@ -335,17 +343,11 @@ class EncryptedInformation extends Component {
     }
 
     create() {
-        let element = document.createElement("div");
-        element.id = this.label;
-        this.CONTENT_CLASSES.forEach(c => element.classList.add(c));
+        let element = documentCreateElement("div", this.label, this.CONTENT_CLASSES);
 
-        let infoContent = document.createElement("div");
-        infoContent.id = this.encryptedInfoTextContent.label;
-        infoContent.classList.add(this.INFO_CONTENT_CLASS);
+        let infoContent = documentCreateElement("div", this.encryptedInfoTextContent.label, this.INFO_CONTENT_CLASS);
 
-        let infoText = document.createElement("div");
-        infoText.id = this.encryptedInfoText.label;
-        infoText.classList.add(this.INFO_TEXT_CLASS);
+        let infoText = documentCreateElement("div", this.encryptedInfoText.label, this.INFO_TEXT_CLASS);
 
         //always start off encrypted
         infoText.innerHTML = this.formatEncryptedText();
@@ -365,8 +367,6 @@ class EncryptedInformation extends Component {
 
         return element;
     }
-
-    toggle() {}
 
     setup() {
         if(!this.encryptedInfo) return;
@@ -425,8 +425,9 @@ class MainPassEntryRow extends Component {
     constructor(app, page, entry) {
         super("id", "main-entry-" + entry.getField("tag"), page, app);
         this.tag = entry.getField("tag");
+        this.fullEntry = entry.export(false);
         let exportedEntry = entry.export(true);
-        this.entry = Object.entries(exportedEntry);
+        this.entry = exportedEntry;
 
         this.ENTRY_ROW_CLASSES = "h hv-c vh-c entry-row".split(" ");
         this.ENTRY_COL_CLASS = "entry-col";
@@ -441,31 +442,31 @@ class MainPassEntryRow extends Component {
         this.WEBSITE_HEADER = passEntryConfig.website.value;
         this.LINK_ID = "link";
         this.LINK_CLASS = "entry-website-link";
+
+        this.editEntryButton = new IconButton(app, page, this.tag + "-edit-entry-button", "edit");
+        this.EDIT_ENTRY_BUTTON_CLASS = "entry-row-button";
+
+        this.editing = false;
     }
 
     create() {
-        let element = document.createElement("div");
-        element.id = this.label;
-        this.ENTRY_ROW_CLASSES.forEach(c => element.classList.add(c));
+        let element = documentCreateElement("div", this.label, this.ENTRY_ROW_CLASSES);
 
         // Populate entry rows with entry fields
-        this.entry.forEach(field => {
+        Object.entries(this.entry).forEach(field => {
             let header = field[0];
             let content = field[1];
-            let entryColElement = document.createElement("div");
-            entryColElement.id = this.tag + "-" + header; //Eg. Google-Tag
-            entryColElement.classList.add(this.ENTRY_COL_CLASS);
+            let entryColElement = documentCreateElement("div", this.tag + "-" + header, this.ENTRY_COL_CLASS); //Eg. id="Google-tag"
             
             if(header === this.PASSWORD_HEADER) {
                 entryColElement.appendChild(this.passwordEncryptedInformation.create());
             } else if (header === this.WEBSITE_HEADER && content) {
                 if(content.match(this.app.WEBSITE_REGEXP)) {
                     let address = content;
-                    let link = document.createElement("a");
+                    
+                    let link = documentCreateElement("a", this.tag + "-" + this.LINK_ID, this.LINK_CLASS); //Eg. id=Google-link
                     link.href = "//" + content; //stops from appending onto current url
-                    link.id = this.tag + "-" + this.LINK_ID; //Eg. Google-link
                     link.target = "_blank";
-                    link.classList.add(this.LINK_CLASS);
                     link.innerHTML = address;
                     entryColElement.appendChild(link);
                 } else {
@@ -477,11 +478,27 @@ class MainPassEntryRow extends Component {
 
             element.appendChild(entryColElement);
         })
+        let editEntryButton = this.editEntryButton.create();
+        editEntryButton.classList.add(this.EDIT_ENTRY_BUTTON_CLASS);
+        element.appendChild(editEntryButton);
         return element;
     }
 
     setup() {
         this.passwordEncryptedInformation.setup();
+        this.toggleEditing(this.editing);
+        this.editEntryButton.addEventListener(['click'], function() {
+            this.app.goToEditPage("edit", this.page, this.fullEntry);
+        }.bind(this));
+    }
+
+    toggleEditing(editing) {
+        this.editing = editing;
+        if(this.editing) {
+            this.editEntryButton.show();
+        } else {
+            this.editEntryButton.hide();
+        }
     }
 }
 
@@ -493,24 +510,35 @@ class MainHeaderRow extends Component {
         this.HEADER_ROW_CLASS = "header-row";
         this.ENTRY_ROW_CLASSES = "h hv-c vh-c entry-row".split(" ");
         this.ENTRY_COL_CLASS = "entry-col";
+        this.HEADER_COL_ID_PREFIX = "header-col-"
+
+        this.EDITING_CLASS = "header-row-editing";
+
+        this.editing = false;
     }
 
     create() {
         // Create header row
-        let element = document.createElement("div");
-        element.id = this.label; //main-entry-header-row
-        this.ENTRY_ROW_CLASSES.forEach(c => element.classList.add(c));
+        let element = documentCreateElement("div", this.label, this.ENTRY_ROW_CLASSES);
         element.classList.add(this.HEADER_ROW_CLASS);
 
         // Populate header row with headers
         this.tableHeaders.forEach(header => {
-            let headerColElement = document.createElement("div");
-            headerColElement.id = "header-col-" + header; //Eg.header-col-Password
-            headerColElement.classList.add(this.ENTRY_COL_CLASS);
+            let headerColElement = documentCreateElement("div", this.HEADER_COL_ID_PREFIX + header, this.ENTRY_COL_CLASS);
             headerColElement.innerHTML = capitalize(header);
             element.appendChild(headerColElement);
         })
         return element;
+    }
+
+    toggleEditing(editing) {
+        this.editing = editing;
+        if(this.editing) {
+            this.getElement().classList.add(this.EDITING_CLASS);
+        } else {
+            this.getElement().classList.remove(this.EDITING_CLASS);
+        }
+
     }
 }
 
@@ -535,6 +563,8 @@ class MainTable extends Component {
         this.ENTRIES_ADD_ICON_NAME = "playlist_add";
         
         this.addPassEntryButton = new IconButton(app, page, "add-new-pass-entry-button", this.NO_ENTRIES_ADD_ICON_NAME);
+
+        this.editing = false;
     }
 
     updateEntries(entries = []) {
@@ -546,18 +576,15 @@ class MainTable extends Component {
 
             this._populateEntryContent(entryContent.getElement(), entries);
         }
-        this._setupPassEntryRows();
+        
+        this.setup(true);
     }
 
     create(entries = []) {
-        let element = document.createElement("div");
-        element.id = this.label;
-        this.ENTRY_TABLE_CLASSES.forEach(c => element.classList.add(c));
+        let element = documentCreateElement("div", this.label, this.ENTRY_TABLE_CLASSES);
         element.style.maxHeight = is_mobile_or_tablet_view() ? "60vh" : "600px";
 
-        let headerContent = document.createElement("div");
-        headerContent.id = this.MAIN_TABLE_HEADER_CONTENT_ID;
-        this.TABLE_CONTENT_CLASSES.forEach(c => headerContent.classList.add(c));
+        let headerContent = documentCreateElement("div", this.MAIN_TABLE_HEADER_CONTENT_ID, this.TABLE_CONTENT_CLASSES);
 
         let headerRow = this.headerRow.create();
         let headerRowDivider = this.headerRowDivider.create();
@@ -565,17 +592,13 @@ class MainTable extends Component {
         headerContent.appendChild(headerRow);
         headerContent.appendChild(headerRowDivider);
 
-        let entryContent = document.createElement("div");
-        entryContent.id = this.MAIN_TABLE_ENTRY_CONTENT_ID;
-        this.TABLE_CONTENT_CLASSES.forEach(c => entryContent.classList.add(c));
+        let entryContent = documentCreateElement("div", this.MAIN_TABLE_ENTRY_CONTENT_ID, this.TABLE_CONTENT_CLASSES);
 
         let addPassEntryButton = this.addPassEntryButton.create();
         
         this._populateEntryContent(entryContent, entries);
 
-        let footerContent = document.createElement("div");
-        footerContent.id = this.MAIN_TABLE_FOOTER_CONTENT_ID;
-        this.TABLE_CONTENT_CLASSES.forEach(c => footerContent.classList.add(c));
+        let footerContent = documentCreateElement("div", this.MAIN_TABLE_FOOTER_CONTENT_ID, this.TABLE_CONTENT_CLASSES);
 
         footerContent.appendChild(addPassEntryButton);
 
@@ -613,9 +636,18 @@ class MainTable extends Component {
         })
     }
 
-    setup() {
-        this._setupAddPassEntryButton();
+    toggleEditing(editing) {
+        this.editing = editing;
+        this.passEntryRows.forEach(r => {
+            r.toggleEditing(this.editing);
+        })
+        this.headerRow.toggleEditing(this.editing);
+    }
+
+    setup(update = false) {
+        if(!update) this._setupAddPassEntryButton();
         this._setupPassEntryRows();
+        this.toggleEditing(this.editing);
     }
 
     _setupPassEntryRows() {
@@ -634,15 +666,16 @@ class MainTable extends Component {
 class MainOptionsEdit extends Component {
     constructor(app, page) {
         super("id", "main-page-option-edit", page, app);
-        this.button = new IconButton(app, page, "main-page-option-edit-button", "edit_note");
 
         this.editing = false;
         this.EDITING_MODE_BUTTON_CLASS = "main-page-option-edit-button-editing";
+        this.START_EDITING_ICON_NAME = "edit_note";
+        this.STOP_EDITING_ICON_NAME = "edit";
+        this.button = new IconButton(app, page, "main-page-option-edit-button", this.START_EDITING_ICON_NAME);
     }
 
     create() {
-        let element = document.createElement("div");
-        element.id = this.label;
+        let element = documentCreateElement("div", this.label);
         element.appendChild(this.button.create());
 
         return element;
@@ -652,14 +685,17 @@ class MainOptionsEdit extends Component {
         this.button.addEventListener(["click"], function() {
             this.editing = !this.editing;
             this.toggleEditing(this.editing);
+            this.page.toggleEditing(this.editing);
         }.bind(this));
     }
 
     toggleEditing(editing) {
         if(editing) {
             this.button.getElement().classList.add(this.EDITING_MODE_BUTTON_CLASS);
+            this.button.setIcon(this.STOP_EDITING_ICON_NAME);
         } else {
             this.button.getElement().classList.remove(this.EDITING_MODE_BUTTON_CLASS);
+            this.button.setIcon(this.START_EDITING_ICON_NAME);
         }
     }
 
@@ -689,16 +725,12 @@ class MainOptionsSearch extends Component {
     }
 
     create() {
-        let element = document.createElement("div");
-        this.SEARCH_PANEL_CLASSES.forEach(c => element.classList.add(c));
-        element.id = this.label;
+        let element = documentCreateElement("div", this.label, this.SEARCH_PANEL_CLASSES);
 
         let icon = this.icon.create();
 
-        let input = document.createElement("input");
-        input.id = this.inputLabel;
+        let input = documentCreateElement("input", this.inputLabel, this.TEXT_INPUT_CLASS);
         input.type = this.inputType;
-        input.classList.add(this.TEXT_INPUT_CLASS);
         input.name = this.inputLabel;
         
         element.appendChild(icon);
@@ -747,8 +779,7 @@ class MainOptionsDownload extends Component {
     }
 
     create() {
-        let element = document.createElement("div");
-        element.id = this.label;
+        let element = documentCreateElement("div", this.label);
         element.appendChild(this.button.create());
 
         return element;
@@ -778,10 +809,8 @@ class EditTextInput extends Component {
     }
 
     create() {
-        let element = document.createElement("input");
-        element.id = this.label;
+        let element = documentCreateElement("input", this.label, this.TEXT_INPUT_CLASS);
         element.type = this.inputType;
-        element.classList.add(this.TEXT_INPUT_CLASS);
         element.name = this.label;
 
         return element;
@@ -801,9 +830,7 @@ class EditTextArea extends Component {
     }
 
     create() {
-        let element = document.createElement("textarea");
-        element.id = this.label;
-        element.classList.add(this.TEXT_AREA_CLASS);
+        let element = documentCreateElement("textarea", this.label, this.TEXT_AREA_CLASS);
         element.name = this.label;
 
         return element;
@@ -815,6 +842,8 @@ class EditView extends Component {
         super("id", "edit-view", page, app);
 
         this.config = app.passManager.config;
+
+        this.actionTypes = page.actionTypes;
 
         this.inputs = {}
         let passEntryConfig = this.config.EntryConfig;
@@ -837,24 +866,26 @@ class EditView extends Component {
         this.EDIT_VIEW_ROW_HEADER_CLASS = "h hv-r vh-c edit-view-row-header".split(" ");
         this.EDIT_VIEW_ROW_INPUT_CLASS = "edit-view-row-input";
         this.EDIT_VIEW_FOOTER_ROW_CLASSES = "h hv-c vh-c edit-view-row".split(" ");
+
+        this.PASSWORD_HEADER = passEntryConfig.password.value;
+        this.EDIT_PASSWORD_MESSAGE = "Type to change old password";
+        this.SECRETS_HEADER = passEntryConfig.secrets.value;
+        this.EDIT_SECRETS_MESSAGE = "Type to change old secrets";
+
+        this.action;
     }
 
     create() {
-        let element = document.createElement("div");
-        element.id = this.label;
-        this.EDIT_VIEW_CLASSES.forEach(c => element.classList.add(c));
+        let element = documentCreateElement("div", this.label, this.EDIT_VIEW_CLASSES);
         element.style.maxHeight = is_mobile_or_tablet_view() ? "60vh" : "600px";
 
         Object.entries(this.inputs).forEach(entry => {
             let header = entry[0];
             let input = entry[1];
 
-            let row = document.createElement("div");
-            row.id = this.EDIT_VIEW_ROW_ID_PREFIX + header;
-            this.EDIT_VIEW_ROW_CLASSES.forEach(c => row.classList.add(c));
+            let row = documentCreateElement("div", this.EDIT_VIEW_ROW_ID_PREFIX + header, this.EDIT_VIEW_ROW_CLASSES);
 
-            let rowHeader = document.createElement("div");
-            this.EDIT_VIEW_ROW_HEADER_CLASS.forEach(c => rowHeader.classList.add(c));
+            let rowHeader = documentCreateElement("div", null, this.EDIT_VIEW_ROW_HEADER_CLASS);
 
             rowHeader.innerHTML = capitalize(header) + ":";
 
@@ -867,8 +898,7 @@ class EditView extends Component {
             element.appendChild(row);
         })
 
-        let footer = document.createElement("div");
-        this.EDIT_VIEW_FOOTER_ROW_CLASSES.forEach(c => footer.classList.add(c));
+        let footer = documentCreateElement("div", null, this.EDIT_VIEW_FOOTER_ROW_CLASSES);
 
         footer.appendChild(this.cancelButton.create());
         footer.appendChild(this.confirmButton.create());
@@ -898,7 +928,7 @@ class EditView extends Component {
             let value = this.inputs[field].getElement().value;
             if(value){
                 if(passEntryConfig[field].isArray) {
-                    value = value.split("\n");
+                    value = value.split(this.config.PassEntryInputArraySeparator);
                 }
                 out[field] = value;
             }
@@ -910,8 +940,14 @@ class EditView extends Component {
         if(!entry.tag) {
             throw new Error("Entry must have a tag");
         }
-        if(this.app.passManager.entryAlreadyExistsWithTag(entry.tag)) {
-            throw new Error("Entry cannot have same tag as existing entries");
+        if(this.action === this.actionTypes.ADD) {
+            if(this.app.passManager.entryAlreadyExistsWithTag(entry.tag)) {
+                throw new Error("ADD: Entry cannot have same tag as existing entries");
+            }
+        } else if(this.action === this.actionTypes.EDIT) {
+            if(this.app.passManager.entryAlreadyExistsWithTag(entry.tag, this.page.editEntry.tag)) {
+                throw new Error("EDIT: Entry cannot have same tag as existing entries");
+            }
         }
         if(entry.website) {
             if(!entry.website.match(this.app.WEBSITE_REGEXP)) {
@@ -921,9 +957,37 @@ class EditView extends Component {
         }
     }
 
-    clearInputs() {
+    populateInputs(entry) {
+        let passEntryConfig = this.config.EntryConfig;
+
+        Object.entries(entry).forEach(entryField => {
+            let header = entryField[0];
+            let content = entryField[1];
+            if(passEntryConfig[header].isEncrypted) {
+                content = null;
+                if(header === this.PASSWORD_HEADER) {
+                    this.inputs[header].getElement().placeholder = this.EDIT_PASSWORD_MESSAGE;
+                } else if(header === this.SECRETS_HEADER) {
+                    this.inputs[header].getElement().placeholder = this.EDIT_SECRETS_MESSAGE;
+                }
+            } else {
+                if(passEntryConfig[header].isArray) {
+                    content = content.join(this.config.PassEntryInputArraySeparator);
+                }
+            }
+            this.inputs[header].getElement().value = content;
+        });
+    }
+
+    reset() {
         Object.values(this.inputs).forEach(input => {
             input.getElement().value = "";
+            input.getElement().style = null;
+            input.getElement().placeholder = "";
         });
+    }
+
+    setAction(action) {
+        this.action = action;
     }
 }

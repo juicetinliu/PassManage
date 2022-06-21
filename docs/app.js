@@ -42,12 +42,12 @@ class App {
         // this.pages.LoginPage.show();
         // this.pages.MainPage.show();
         // this.pages.EditPage.show();
-        // this.___FOR_DEBUGGING_MAIN_PAGE();
+        // this.___DEBUG_MAIN_PAGE();
     }
 
-    ___FOR_DEBUGGING_MAIN_PAGE() {
+    ___DEBUG_MAIN_PAGE() {
         // FOR DEBUGGING
-        let testEntryStrings = ['Fb[|]website[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
+        let testEntryStrings = ['Fb[|]website[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
         let e = this.passManager.entriesFromStrings(testEntryStrings);
         this.passManager.setEntries(e);
 
@@ -165,6 +165,27 @@ class App {
         this.goToMainPage(referringPage);
     }
 
+    async editPassEntry(entryTag, input, referringPage) {
+        this.hideAllPages();
+        this.mainLoading.show();
+
+        try {
+            await this.passManager.editPassEntry(entryTag, input); //wait for web worker completion
+        } catch (e) {
+            if(e instanceof AppError) {
+                if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
+                    let callBackAfterLogin = (refPage) => {
+                        this.editPassEntry(entryTag, input, refPage);
+                    };
+                    this.goToLoginPage(referringPage, callBackAfterLogin);
+                    return;
+                }
+            }
+            throw e;
+        }
+        this.goToMainPage(referringPage);
+    }
+
     confirmEditPageEntry(entry, referringPage) {
         this.pages.EditPage.setReferringPage(referringPage);
         this.pages.EditPage.confirmEditEntry(entry);
@@ -209,26 +230,27 @@ class App {
         return decryptedSecrets;
     }
 
-    goToEditPage(action, referringPage) {
-        this.pages.EditPage.show();
-        this.pages.EditPage.setAction(action);
+    goToEditPage(action, referringPage, editEntry = null) {
         this.pages.EditPage.setReferringPage(referringPage);
+        this.pages.EditPage.setAction(action);
+        this.pages.EditPage.setEditObject(editEntry);
+        this.pages.EditPage.show();
     }
 
     goToMainPage(referringPage, update = true) {
-        this.pages.MainPage.show(update);
         this.pages.MainPage.setReferringPage(referringPage);
+        this.pages.MainPage.show(update);
     }
 
     goToDropPage(referringPage) {
-        this.pages.DropPage.show();
         this.pages.DropPage.setReferringPage(referringPage);
+        this.pages.DropPage.show();
     }
 
     goToLoginPage(referringPage, callBackAfterLogin) {
-        this.pages.LoginPage.show();
         this.pages.LoginPage.setReferringPage(referringPage);
         this.pages.LoginPage.setCallBackAfterLogin(callBackAfterLogin);
+        this.pages.LoginPage.show();
     }
 
     transitionFromIntro() {

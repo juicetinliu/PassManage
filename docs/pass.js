@@ -26,6 +26,7 @@ const PassConfig = {
     PassEntryValueSeparator: "[|]",
     PassEntryArraySeparator: "[*]",
     PassEntrySeparator: "\n",
+    PassEntryInputArraySeparator: "\n",
     SHA256ToStringEncoding: CryptoJS.enc.Base64,
     EntryConfig: PassEntryConfig
 };
@@ -63,10 +64,10 @@ class PassEntry {
         return this[field];
     }
 
-    addOrSaveToField(field, value) {
+    addOrSaveToField(field, value, setField = false) {
         if(!this.isFieldValid(field)) throw new AppError(field + ' is an invalid PassEntry field to add or save to', AppErrorType.INVALID_PASS_ENTRY_FIELD);
-        if(value) {
-            if(this.config.EntryConfig[field].isArray) {
+        if(value !== null) {
+            if(this.config.EntryConfig[field].isArray && !setField) {
                 this[field].push(value);
             } else {
                 this[field] = value;
@@ -217,6 +218,37 @@ class PassManager {
         });
     }
 
+    _getPassEntryByTag(tag) {
+        let out = this.entries.find(e => {
+            return e.tag === tag;
+        });
+        return out;
+    }
+
+    async editPassEntry(tag, input) {
+        let editEntry = this._getPassEntryByTag(tag);
+        
+        let masterKey;
+        if(input.password || input.secrets) {
+            masterKey = await this._generateMasterKey();
+        }
+
+        let entryConfig = this.config.EntryConfig;
+        Object.entries(input).forEach(inputField => {
+            let field = inputField[0];
+            let value = inputField[1];
+
+            if(entryConfig[field].isEncrypted) {
+                if(entryConfig[field].isArray) { 
+                    value = value.map(val => this._encryptString(val, masterKey));
+                } else {
+                    value = this._encryptString(value, masterKey);
+                }
+            }
+            editEntry.addOrSaveToField(field, value, true);
+        })
+    }
+
     async addPassEntry(input) {
         let masterKey;
         if(input.password || input.secrets) {
@@ -325,7 +357,7 @@ class PassManager {
     }
 
     _processEntryTags(entries) { //uniquely identify entries and fill in missing tags
-        let getDuplicateTagEntryIndex = (tag) => {return this.entryAlreadyExistsWithTag(tag, true, entries)};
+        let getDuplicateTagEntryIndex = (tag) => {return this.entryAlreadyExistsWithTag(tag, null, true, entries)};
         let tagField = "tag";
         let appendNum = 0;
         entries.forEach((entry, index) => {
@@ -356,14 +388,22 @@ class PassManager {
         });
     }
 
-    entryAlreadyExistsWithTag(tag, returnIndex = false, entries = this.entries) {
+    entryAlreadyExistsWithTag(tag, ignoreTag = null, returnIndex = false, entries = this.entries) {
         if(returnIndex) {
             return entries.findIndex(e => {
-                return e.tag === tag;
+                if(ignoreTag) {
+                    return e.tag === tag && e.tag !== ignoreTag;
+                } else {
+                    return e.tag === tag;
+                }
             })
         } else {
             let other = entries.find(e => {
-                return e.tag === tag;
+                if(ignoreTag) {
+                    return e.tag === tag && e.tag !== ignoreTag;
+                } else {
+                    return e.tag === tag;
+                }
             })
             return other ? true : false;
         }

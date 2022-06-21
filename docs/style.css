@@ -7,7 +7,7 @@
     --background-blue: #3c4952;
     --highlight-blue: #4387b7;
     --action-blue: #a1d4f9;
-    --not-too-white: #3e3e3e;
+    --not-too-white: #393939;
     --background-white: #292929;
     --text-color: #fafafa;
     --light-shadow: rgba(6, 6, 6, 0.5);
@@ -92,6 +92,7 @@ body {
     background-color: var(--not-too-white);
     color: var(--text-color);
     transition: border-color 1s;
+    height: 60px;
 }
 
 .text-area:hover {
@@ -372,6 +373,10 @@ body {
     font-weight: bold;
 }
 
+.header-row-editing {
+    margin-right: 75px !important;
+}
+
 .header-divider {
     border-bottom: 3px solid var(--action-blue);
 }
@@ -379,6 +384,8 @@ body {
 .entry-row {
     gap: 20px;
     flex-wrap: nowrap;
+    margin-right: 20px;
+    width: -webkit-fill-available;
 }
 
 .entry-col {
@@ -396,11 +403,19 @@ body {
 }
 
 .encrypted-info-toggle-button {
-    margin: 0px 15px;
+    margin: 0 0 0 20px;
+}
+
+.entry-row-button {
+    margin: 0px;
+}
+
+.encrypted-info-content-password {
+    flex-wrap: nowrap;
+    justify-content: space-between;
 }
 
 .encrypted-info-text-content-password {
-    width: 110px;
     overflow-x: auto;
     white-space: nowrap;
 }

@@ -66,16 +66,20 @@ class EditPage extends Page {
     constructor(app) {
         super("edit-page", app);
 
+        this.config = app.passManager.config;
+
+        this.actionTypes = {
+            ADD: "add",
+            EDIT: "edit"
+        }
+
         this.editContent = new Element("id", "edit-content");
 
         this.components = {
             editView: new EditView(app, this)
         }
 
-        this.actionTypes = {
-            ADD: "add",
-            EDIT: "edit"
-        }
+        this.editEntry = null;
 
         this.action = this.actionTypes.ADD; //ADD or EDIT
     }
@@ -93,10 +97,18 @@ class EditPage extends Page {
             console.log("invalid action " + action + "; defaulting to ADD");
             this.action = this.actionTypes.ADD;
         }
+        this.components.editView.setAction(this.action);
+    }
+
+    setEditObject(editEntry) {
+        this.editEntry = editEntry;
     }
 
     show() {
-        this.components.editView.clearInputs();
+        this.components.editView.reset();
+        if(this.action === this.actionTypes.EDIT && this.editEntry) {
+            this.components.editView.populateInputs(this.editEntry);
+        }
         super.show()
     }
 
@@ -110,10 +122,40 @@ class EditPage extends Page {
         if(this.action === this.actionTypes.ADD) {
             this.app.addPassEntry(entry, this);
         } else if (this.action === this.actionTypes.EDIT) {
-            // this.app.editPassEntry(entry);
+            let diff = this._processEditEntry(entry);
+            let changeTag = this.editEntry.tag;
+            this.editEntry = null;
+            this.app.editPassEntry(changeTag, diff, this);
         } else {
             throw new Error("Shouldn't reach this in confirmEntry()")
         }
+    }
+
+    _processEditEntry(entry) { //remove unchanged fields
+        let passEntryConfig = this.config.EntryConfig;
+        let out = {};
+        Object.entries(this.editEntry).forEach(entryField => {
+            let header = entryField[0];
+            let content = entryField[1];
+            let newContent = entry[header];
+
+            if(passEntryConfig[header].isEncrypted) {
+                if(newContent) out[header] = newContent;
+            } else {
+                if(content !== newContent) {
+                    if(passEntryConfig[header].isArray) {
+                        if(content !== [] || newContent !== undefined) { //ignore if empty => empty
+                            out[header] = newContent ? newContent : [];
+                        }
+                    } else {
+                        if(content !== "" || newContent !== undefined) { //ignore if empty => empty
+                            out[header] = newContent ? newContent : "";
+                        }
+                    }
+                }
+            }
+        });
+        return out;
     }
 }
 
@@ -131,6 +173,8 @@ class MainPage extends Page {
             mainDownloadButton: new MainOptionsDownload(app, this),
             mainTable: new MainTable(app, this)
         }
+
+        this.editing = false;
     }
 
     setup() {
@@ -158,6 +202,11 @@ class MainPage extends Page {
 
         this._createOptionsBar();
         this._createMainTable(entries);
+    }
+
+    toggleEditing(editing) {
+        this.editing = editing;
+        this.components.mainTable.toggleEditing(this.editing);
     }
 
     _createOptionsBar() {
