@@ -145,6 +145,7 @@ class PassManager {
             this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = setTimeout(function() {
                 this.CACHED_MASTER_KEY = null;
             }.bind(this), this.CACHE_MASTER_KEY_DURATION_MS);
+            this.app.passCacheTimer.start();
         } else {
             this.CACHED_MASTER_KEY = null;
         }
@@ -160,6 +161,7 @@ class PassManager {
             clearTimeout(this.DESTROY_CACHED_MASTER_KEY_TIMEOUT);
         }
         this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = null;
+        this.app.passCacheTimer.reset();
     }
 
     saveMasterPasswordToHash(masterPassword) {
@@ -183,7 +185,7 @@ class PassManager {
         this.deviceSecretHash = CryptoJS.SHA256(this.deviceSecret).toString(this.config.SHA256ToStringEncoding);
     }
 
-    _generateMasterKey(retries = 0) {
+    generateMasterKey(retries = 0) {
         if(!this.masterPasswordHash) throw new AppError("Missing master password hash", AppErrorType.MISSING_MASTER_PASSWORD);
         if(!this.deviceSecretHash) throw new Error("Missing device secret hash");
 
@@ -205,7 +207,7 @@ class PassManager {
                 let mk = this.cryptoWorker.getResponseForID(event, jobID);
                 if(mk === CryptoWorkerFunctions.NOTMYRESULT) { //retry after small delay
                     setTimeout(async () => {
-                        let retrymk = await this._generateMasterKey(retries + 1);
+                        let retrymk = await this.generateMasterKey(retries + 1);
                         this.CACHE_MASTER_KEY(retrymk);
                         resolve(retrymk);
                     }, this.cryptoWorker.REQUEST_RETRY_DELAY_MS);
@@ -230,7 +232,7 @@ class PassManager {
         
         let masterKey;
         if(input.password || input.secrets) {
-            masterKey = await this._generateMasterKey();
+            masterKey = await this.generateMasterKey();
         }
 
         let entryConfig = this.config.EntryConfig;
@@ -252,7 +254,7 @@ class PassManager {
     async addPassEntry(input) {
         let masterKey;
         if(input.password || input.secrets) {
-            masterKey = await this._generateMasterKey();
+            masterKey = await this.generateMasterKey();
         }
         
         let entry = new PassEntry();
@@ -295,7 +297,7 @@ class PassManager {
             console.log("No need to decrypt " + field);
             return encryptedString;
         }
-        let masterKey = await this._generateMasterKey();
+        let masterKey = await this.generateMasterKey();
         
         let out = this._decryptString(encryptedString, masterKey);
 
@@ -570,4 +572,47 @@ function runTestCases(){
 
 function capitalize(str) {
     return str[0].toUpperCase() + str.slice(1);
+}
+
+class SimpleTimer {
+    constructor(duration, stepInterval = 1000) {
+        this.duration = duration;
+        this.callBacks = [];
+        this.stepInterval = stepInterval;
+        this.running = false;
+        this.timeout = null;
+    }
+
+    start() {
+        if (this.running) return;
+        this.running = true;
+
+        let start = Date.now();
+        let that = this;
+        let diff;
+        (function timer() {
+            diff = that.duration - (((Date.now() - start) / 1000) | 0);
+
+            if (diff > 0) {
+                if(that.timeout) clearTimeout(that.timeout); //clear last timeout
+                that.timeout = setTimeout(timer, that.stepInterval);
+            } else {
+                diff = 0;
+                that.running = false;
+            }
+            that.callBacks.forEach(c => c(diff));
+        }());
+    }
+
+    reset() {
+        this.running = false;
+        if(this.timeout) {
+            clearTimeout(this.timeout); //clear last timeout
+            this.timeout = null;
+        }
+    }
+
+    addCallBack(callBack) {
+        this.callBacks.push(callBack);
+    }
 }

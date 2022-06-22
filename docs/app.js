@@ -25,6 +25,9 @@ class App {
         
         // URL Regex https://regexr.com/3e6m0
         this.WEBSITE_REGEXP = /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
+
+        this.CACHE_DURATION_S = this.passManager.CACHE_MASTER_KEY_DURATION_MS / 1000;
+        this.passCacheTimer = new SimpleTimer(this.CACHE_DURATION_S);
     }
 
     run() {
@@ -230,7 +233,28 @@ class App {
         return decryptedSecrets;
     }
 
-    goToEditPage(action, referringPage, editEntry = null) {
+    REFRESH_CACHED_MASTER_KEY_TIMEOUT() {
+        this.passManager.RESET_DESTROY_CACHED_MASTER_KEY_TIMEOUT();
+    }
+
+    async generateMasterKey(referringPage) {
+        try {
+            await this.passManager.generateMasterKey();
+        } catch (e) {
+            if(e instanceof AppError) {
+                if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
+                    let callBackAfterLogin = async (refPage) => {
+                        await this.generateMasterKey(refPage);
+                        this.goToMainPage(refPage, false);
+                    };
+                    this.goToLoginPage(referringPage, callBackAfterLogin);
+                    return;
+                }
+            }
+        }
+    }
+
+    goToEditPage(action, referringPage, editEntry = null) { //go to edit page with a set action (edit or add)
         this.pages.EditPage.setReferringPage(referringPage);
         this.pages.EditPage.setAction(action);
         this.pages.EditPage.setEditObject(editEntry);

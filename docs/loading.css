@@ -32,7 +32,6 @@
 
 @keyframes large-square-loader1 {
 0% {
-    background: var(--background-blue);
     transform: scale(0);
 }
 100% {
@@ -45,7 +44,6 @@
 }
 100% {
     transform: scale(0);
-    background: var(--background-blue);
 }
 }
 @keyframes large-square-loader2 {
@@ -112,4 +110,74 @@
     100% {
         transform: translate(20px, 0);
     }
+}
+
+#main-page-option-key-indicator-button {
+    position: relative;
+}
+
+#main-page-option-key-indicator-button:hover {
+    background-color: var(--not-too-white);
+}
+
+#key-button-progress-indicator-loading {
+    position: absolute;
+    top: -10;
+    left: -10;
+    width: 34px;
+    height: 34px;
+    margin: 10px;
+    overflow: visible;
+}
+
+#key-button-progress-indicator-loading-rect {
+    stroke: var(--action-blue);
+    fill: transparent;
+    height: 100%;
+    width: 100%;
+    rx: 15;
+    ry: 15;
+    stroke-width: 6px;
+    stroke-linecap: round;
+    stroke-dasharray: 110, 55;
+    animation: key-button-progress-indicator-loading-rect 1s ease-in-out infinite;
+}
+
+@keyframes key-button-progress-indicator-loading-rect {
+    0% {
+        stroke-dashoffset: -110;
+    }
+    66% {
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dashoffset: 55;
+    }
+}
+
+#key-button-progress-indicator {
+    position: absolute;
+    top: -10;
+    left: -10;
+    width: 34px;
+    height: 34px;
+    margin: 10px;
+    overflow: visible;
+}
+  
+#key-button-progress-indicator-rect {
+    stroke: var(--action-blue);
+    fill: transparent;
+    height: 100%;
+    width: 100%;
+    rx: 15;
+    ry: 15;
+    stroke-width: 6px;
+    stroke-linecap: round;
+    stroke-dashoffset: -2;
+    stroke-dasharray: 0, 110;
+}
+
+.key-button-progress-indicator-zero {
+    stroke: none !important;
 }

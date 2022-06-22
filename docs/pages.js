@@ -170,6 +170,7 @@ class MainPage extends Page {
         this.components = {
             mainSearchInput: new MainOptionsSearch(app, this),
             mainEditButton: new MainOptionsEdit(app, this),
+            mainKeyIndicator: new MainOptionsKeyIndicator(app, this),
             mainDownloadButton: new MainOptionsDownload(app, this),
             mainTable: new MainTable(app, this)
         }
@@ -212,9 +213,12 @@ class MainPage extends Page {
     _createOptionsBar() {
         let search = this.components.mainSearchInput.create();
         let download = this.components.mainDownloadButton.create();
+        let keyIndicator = this.components.mainKeyIndicator.create();
         let edit = this.components.mainEditButton.create();
+        
         this.mainOptionsBar.appendChild(search);
         this.mainOptionsBar.appendChild(edit);
+        this.mainOptionsBar.appendChild(keyIndicator);
         this.mainOptionsBar.appendChild(download);
     }
 

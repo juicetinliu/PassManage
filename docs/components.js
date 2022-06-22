@@ -708,6 +708,138 @@ class MainOptionsEdit extends Component {
     }
 }
 
+class MainOptionsKeyIndicator extends Component {
+    constructor(app, page) {
+        super("id", "main-page-option-key-indicator", page, app);
+
+        this.KEY_VALID_ICON_NAME = "key";
+        this.KEY_INVALID_ICON_NAME = "key_off";
+        this.button = new IconButton(app, page, "main-page-option-key-indicator-button", this.KEY_INVALID_ICON_NAME);
+
+        this.SVG_INDICATOR_LOADING_ID = "key-button-progress-indicator-loading";
+        this.SVG_RECT_LOADING_ID = this.SVG_INDICATOR_LOADING_ID + "-rect";
+
+        this.SVG_INDICATOR_ID = "key-button-progress-indicator";
+        this.SVG_RECT_ID = this.SVG_INDICATOR_ID + "-rect";
+        this.SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+        this.indicatorLoadingElement = new Element("id", this.SVG_RECT_LOADING_ID);
+        this.indicatorElement = new Element("id", this.SVG_RECT_ID);
+        this.INDICATOR_ZERO_CLASS = "key-button-progress-indicator-zero";
+        this.INDICATOR_ELEMENT_MAX_VALUE = 110;
+
+        this.percentage = 0;
+
+        this.longPressTimeout = null;
+        this.longPressed = false;
+        this.LONG_PRESS_DELAY_MS = 1000;
+    }
+
+    create() {
+        let element = documentCreateElement("div", this.label);
+        let button = this.button.create();
+
+        //https://stackoverflow.com/questions/17520337/dynamically-rendered-svg-is-not-displaying
+        let indicator = document.createElementNS(this.SVG_NAMESPACE, "svg");
+        indicator.id = this.SVG_INDICATOR_ID;
+
+        let rect = document.createElementNS(this.SVG_NAMESPACE, "rect");
+        rect.id = this.SVG_RECT_ID;
+        rect.classList.add(this.INDICATOR_ZERO_CLASS);
+
+        let indicatorLoading = document.createElementNS(this.SVG_NAMESPACE, "svg");
+        indicatorLoading.id = this.SVG_INDICATOR_LOADING_ID;
+
+        let rectLoading = document.createElementNS(this.SVG_NAMESPACE, "rect");
+        rectLoading.id = this.SVG_RECT_LOADING_ID;
+        rectLoading.classList.add("hide");
+
+        indicator.appendChild(rect);
+        button.appendChild(indicator);
+
+        indicatorLoading.appendChild(rectLoading);
+        button.appendChild(indicatorLoading);
+        element.appendChild(button);
+
+        return element;
+    }
+
+    setup() {
+        this.app.passCacheTimer.addCallBack(this.setCacheIndicatorCallBack.bind(this));
+        
+        this.button.addEventListener(["click"], async function() {
+            if(this.longPressTimeout) {
+                clearTimeout(this.longPressTimeout);
+                this.longPressTimeout = null;
+            }
+            if(!this.longPressed) {
+                if(this.percentage > 0) {
+
+                } else {
+                    this.indicatorLoadingElement.show();
+                    await this.app.generateMasterKey(this.page);
+                    this.indicatorLoadingElement.hide();
+                }
+            }
+        }.bind(this));
+
+        this.button.addEventListener(["mouseup", "mouseout"], function() {
+            if(this.longPressTimeout) {
+                clearTimeout(this.longPressTimeout);
+                this.longPressTimeout = null;
+                this.longPressed = false;
+            }
+        }.bind(this));
+
+        this.button.addEventListener(["mousedown"], function(event) {
+            if (event.type === "click" && event.button !== 0) {
+                return;
+            }
+            this.longPressed = false;
+        
+            if(!this.longPressTimeout) {
+                this.longPressTimeout = setTimeout(async function() {
+                    this.longPressed = true;
+                    this.longPressTimeout = null;
+
+                    if(this.percentage > 0) {
+                        this.app.REFRESH_CACHED_MASTER_KEY_TIMEOUT();
+                    } else {
+                        this.indicatorLoadingElement.show();
+                        await this.app.generateMasterKey(this.page);
+                        this.indicatorLoadingElement.hide();
+                    }
+                }.bind(this), this.LONG_PRESS_DELAY_MS);
+            }
+        }.bind(this));
+    }
+
+    setCacheIndicatorCallBack(time) {
+        let percentage = 100 * time / this.app.CACHE_DURATION_S;
+        this.setIndicator(percentage);
+    }
+
+    setIndicator(percentage) {
+        percentage = parseInt(percentage);
+        if(percentage > 100 || percentage < 0) throw new Error("Invalid percentage for indicator:" + percentage);
+        this.percentage = percentage;
+
+        let element = this.indicatorElement.getElement();
+        if(percentage === 0) {
+            element.classList.add(this.INDICATOR_ZERO_CLASS);
+            this.button.setIcon(this.KEY_INVALID_ICON_NAME);
+        } else {
+            element.classList.remove(this.INDICATOR_ZERO_CLASS);
+            this.button.setIcon(this.KEY_VALID_ICON_NAME);
+
+            let lineLength = parseInt(this.INDICATOR_ELEMENT_MAX_VALUE * (percentage / 100.0));
+            let dashArray = lineLength + "," + (this.INDICATOR_ELEMENT_MAX_VALUE - lineLength);
+            element.style.strokeDasharray = dashArray;
+        }
+
+    }
+}
+
 class MainOptionsSearch extends Component {
     constructor(app, page) {
         super("id", "main-page-option-search", page, app);
@@ -844,6 +976,7 @@ class EditView extends Component {
         this.config = app.passManager.config;
 
         this.actionTypes = page.actionTypes;
+        this.action;
 
         this.inputs = {}
         let passEntryConfig = this.config.EntryConfig;
@@ -871,8 +1004,6 @@ class EditView extends Component {
         this.EDIT_PASSWORD_MESSAGE = "Type to change old password";
         this.SECRETS_HEADER = passEntryConfig.secrets.value;
         this.EDIT_SECRETS_MESSAGE = "Type to change old secrets";
-
-        this.action;
     }
 
     create() {
