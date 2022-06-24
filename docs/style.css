@@ -362,6 +362,7 @@ body {
     padding-top: 15px;
     overflow-y: overlay;
     flex-wrap: nowrap;
+    scroll-behavior: smooth;
 }
 
 .divider {

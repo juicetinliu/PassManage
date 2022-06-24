@@ -450,17 +450,23 @@ class MainPassEntryRowMoreInfo extends Component {
 
         //NEED A BETTER DESIGN – NOW IT'S JUST A RANDOM DUMP OF NON-TABLED INFORMATION
         // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        let entryStuff = documentCreateElement("div", null, "v hv-c vh-c".split(" "));
+        let entryStuff = documentCreateElement("div", null, "v hv-c vh-t".split(" "));
 
         let passEntryConfig = this.config.EntryConfig;
         passEntryConfig.allFields.forEach(field => {
             let fieldConfig = passEntryConfig[field];
             if(!fieldConfig.forTable) {
                 let thing = documentCreateElement("div");
+                thing.style.width = "280px";
                 if(fieldConfig.isEncrypted) {
+                    let addClasses = "h hv-c vh-c".split(" ");
+                    addClasses.forEach(c => {thing.classList.add(c)});
+                    thing.style.flexWrap = "nowrap";
+                    thing.style.gap = "10px";
+                    
                     let stuff = this.secretsEncryptedInformation.create();
                     let secret = documentCreateElement("div");
-                    secret.innerHTML = this.SECRETS_HEADER;
+                    secret.innerHTML = this.SECRETS_HEADER + ": ";
 
                     thing.appendChild(secret);
                     thing.appendChild(stuff);
@@ -642,6 +648,15 @@ class MainTable extends Component {
         this.ENTRIES_ADD_ICON_NAME = "playlist_add";
         
         this.addPassEntryButton = new IconButton(app, page, "add-new-pass-entry-button", this.NO_ENTRIES_ADD_ICON_NAME);
+    }
+
+    closeAllMoreInfos() {
+        this.passEntryRows.forEach(p => p.toggleShowMore(false));
+    }
+
+    scrollToEntryContentTop() {
+        let entryContent = new Element("id", this.MAIN_TABLE_ENTRY_CONTENT_ID);
+        entryContent.getElement().scrollTop = 0;
     }
 
     updateEntries(entries = []) {
@@ -900,6 +915,13 @@ class MainOptionsSearch extends Component {
         this.input.addEventListener(["focusout"], function() {
             this._toggleSearchFocus(false);
         }.bind(this));
+
+        this.input.addEventListener(["input"], function() {
+            let searchText = this.getSearchValue();
+            if(searchText) {
+                this.app.searchPassManagerEntries(searchText);
+            }
+        }.bind(this));
     }
 
     _toggleSearchFocus(focusIn) {
@@ -907,10 +929,12 @@ class MainOptionsSearch extends Component {
         if(focusIn) {
             this.icon.getElement().classList.add(this.ICON_DISABLED_CLASS);
             this.input.getElement().style.width = "250px";
+            this.page.closeAllMoreInfosAndScrollToTop();
         } else {
             if(!this.getSearchValue()) {
                 this.icon.getElement().classList.remove(this.ICON_DISABLED_CLASS);
                 this.input.getElement().style.width = "150px";
+                this.page.show(true);
             }
         }
     }

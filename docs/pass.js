@@ -117,6 +117,7 @@ class PassManager {
         this.entries = [];
         this.passHandler = new AESHandler();
         this.cryptoWorker = new CryptoWorker();
+        this.passSearchRanker = new PassSearchRanker();
 
         this.app = app;
 
@@ -347,6 +348,10 @@ class PassManager {
         return this.entries;
     }
 
+    searchEntries(searchText) {
+        return this.passSearchRanker.searchEntries(this.getEntries(), searchText);
+    }
+
     _entriesToString() {
         let entryStrings = [];
         this._processEntryTags(this.entries);
@@ -412,6 +417,41 @@ class PassManager {
     close() {
         this.cryptoWorker.terminate();
     }
+}
+
+class PassSearchRanker {
+    constructor() {}
+
+    searchEntries(entries, searchText) {
+        //NAIVE SEARCH – better to search through phrases with words and weight different fields
+        let copyEntries = [...entries];
+        copyEntries.sort(function(a, b) {
+            let distA = this._levenshteinDistance(searchText, a.tag);
+            let distB = this._levenshteinDistance(searchText, b.tag);
+            return distA - distB;
+        }.bind(this));
+        return copyEntries;
+    }
+
+    // https://www.30secondsofcode.org/js/s/levenshtein-distance
+    _levenshteinDistance(s, t) {
+        if (!s.length) return t.length;
+        if (!t.length) return s.length;
+        let arr = [];
+        for (let i = 0; i <= t.length; i++) {
+            arr[i] = [i];
+            for (let j = 1; j <= s.length; j++) {
+                arr[i][j] = (i === 0) ? j : Math.min(
+                    arr[i - 1][j] + 1,
+                    arr[i][j - 1] + 1,
+                    arr[i - 1][j - 1] + (s[j - 1] === t[i - 1] ? 0 : 1)
+                );
+            }
+        }
+        return arr[t.length][s.length];
+    };
+
+
 }
 
 class PassHandler {
@@ -614,3 +654,4 @@ class SimpleTimer {
         this.callBacks.push(callBack);
     }
 }
+

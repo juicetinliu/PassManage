@@ -61,6 +61,11 @@ class App {
         return this.passManager.getEntries();
     }
 
+    searchPassManagerEntries(searchText) {
+        let rankedEntries = this.passManager.searchEntries(searchText);
+        this.pages.MainPage.updateMainTableEntries(rankedEntries);
+    }
+
     hideAllPages() {
         Object.values(this.pages).forEach(p => p.hide());
         this.mainLoading.hide();

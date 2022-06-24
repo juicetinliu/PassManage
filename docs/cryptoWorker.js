@@ -1,4 +1,4 @@
-importScripts('https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.js');
+importScripts('libraries/crypto-js.min.js');
 importScripts('crypto.js');
 
 let completedJobsWithResultCache = [];

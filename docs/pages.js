@@ -185,7 +185,7 @@ class MainPage extends Page {
 
     show(update) {
         super.show();
-        if(update) this._updateMainTableEntries();
+        if(update) this.updateMainTableEntries(this.app.getPassManagerEntries());
         this.mainOptionsBar.show();
     }
 
@@ -219,9 +219,13 @@ class MainPage extends Page {
         this.mainContent.appendChild(table);
     }
 
-    _updateMainTableEntries() {
-        let entries = this.app.getPassManagerEntries();
+    updateMainTableEntries(entries) {
         this.components.mainTable.updateEntries(entries);
+    }
+
+    closeAllMoreInfosAndScrollToTop() {
+        this.components.mainTable.closeAllMoreInfos();
+        this.components.mainTable.scrollToEntryContentTop();
     }
 }
 
