@@ -50,7 +50,7 @@ class App {
 
     ___DEBUG_MAIN_PAGE() {
         // FOR DEBUGGING
-        let testEntryStrings = ['Fb[|]website[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
+        let testEntryStrings = ['Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
         let e = this.passManager.entriesFromStrings(testEntryStrings);
         this.passManager.setEntries(e);
 
@@ -194,10 +194,10 @@ class App {
         this.pages.EditPage.confirmEditEntry(entry);
     }
 
-    async decryptPassEntryPassword(p, referringPage, component) {
-        let decryptedPassword;
+    async decryptPassEntryField(field, content, referringPage, component) {
+        let decryptedField;
         try {
-            decryptedPassword = await this.passManager.decryptPassEntryField("password", p); //wait for web worker completion
+            decryptedField = await this.passManager.decryptPassEntryField(field, content); //wait for web worker completion
         } catch (e) {
             if(e instanceof AppError) {
                 if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
@@ -211,26 +211,7 @@ class App {
             }
             throw e;
         }
-        return decryptedPassword;
-    }
-
-    async decryptPassEntrySecrets(s, referringPage) {
-        let decryptedSecrets;
-        try {
-            decryptedSecrets = await this.passManager.decryptPassEntryField("secrets", s); //wait for web worker completion
-        } catch (e) {
-            if(e instanceof AppError) {
-                if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
-                    let callBackAfterLogin = async (refPage) => {
-                        await this.decryptPassEntrySecrets(p, refPage);
-                    };
-                    this.goToLoginPage(referringPage, callBackAfterLogin);
-                    return;
-                }
-            }
-            throw e;
-        }
-        return decryptedSecrets;
+        return decryptedField;
     }
 
     REFRESH_CACHED_MASTER_KEY_TIMEOUT() {

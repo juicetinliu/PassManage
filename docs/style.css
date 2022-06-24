@@ -206,6 +206,19 @@ body {
     margin: 0px 0px 0px 15px;
 }
 
+#input-password {
+    width: 160px;
+}
+
+#login-page-skip-spacer-text {
+    color: var(--disabled-text-color);
+}
+
+#login-page-skip-button {
+    width: 60px;
+    height: 30px;
+}
+
 /* Drop page styles */
 #input-password-file {
     opacity: 0.0;
@@ -315,25 +328,12 @@ body {
     position: relative;
 }
 
-#main-page-option-edit {
+#main-page-option-key-indicator {
     margin-left: auto;
 }
 
 #main-page-option-download {
     
-}
-
-#main-page-option-edit-button {
-    margin: 15px 10px;
-}
-
-.main-page-option-edit-button-editing {
-    transition: background-color 1s;
-    box-shadow: inset 0px 0px 0px 3px var(--action-blue);
-}
-
-.main-page-option-edit-button-editing:hover {
-    background-color: var(--not-too-white);
 }
 
 #main-page-option-download-button {
@@ -360,25 +360,47 @@ body {
 
 #main-table-entry-content {
     padding-top: 15px;
-    overflow-y: auto;
+    overflow-y: overlay;
     flex-wrap: nowrap;
 }
 
 .divider {
     width: 100%;
+}
+
+.row-divider { 
     border-bottom: 1px dashed var(--action-blue);
 }
 
 .header-row {
     font-weight: bold;
-}
-
-.header-row-editing {
     margin-right: 75px !important;
 }
 
 .header-divider {
     border-bottom: 3px solid var(--action-blue);
+}
+
+.wrapper-row {
+    width: 100%;
+}
+
+.main-entry-more-info {
+    transition: height 0.3s;
+    height: 0px;
+    overflow: hidden;
+}
+
+.main-entry-more-info-open {
+    height: 150px !important;
+}
+
+.main-entry-more-info-content {
+    padding-top: 15px;
+    margin-right: 20px;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: auto;
 }
 
 .entry-row {

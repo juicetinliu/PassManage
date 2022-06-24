@@ -169,13 +169,11 @@ class MainPage extends Page {
 
         this.components = {
             mainSearchInput: new MainOptionsSearch(app, this),
-            mainEditButton: new MainOptionsEdit(app, this),
             mainKeyIndicator: new MainOptionsKeyIndicator(app, this),
             mainDownloadButton: new MainOptionsDownload(app, this),
             mainTable: new MainTable(app, this)
         }
 
-        this.editing = false;
     }
 
     setup() {
@@ -205,19 +203,12 @@ class MainPage extends Page {
         this._createMainTable(entries);
     }
 
-    toggleEditing(editing) {
-        this.editing = editing;
-        this.components.mainTable.toggleEditing(this.editing);
-    }
-
     _createOptionsBar() {
         let search = this.components.mainSearchInput.create();
         let download = this.components.mainDownloadButton.create();
         let keyIndicator = this.components.mainKeyIndicator.create();
-        let edit = this.components.mainEditButton.create();
         
         this.mainOptionsBar.appendChild(search);
-        this.mainOptionsBar.appendChild(edit);
         this.mainOptionsBar.appendChild(keyIndicator);
         this.mainOptionsBar.appendChild(download);
     }
@@ -240,11 +231,16 @@ class LoginPage extends Page {
 
         this.loginContent = new Element("id", "login-content");
 
+        this.loginSkipContent = new Element("id", "login-page-skip-content");
+        this.loginSkipContentButton = new Element("id", "login-page-skip-button");
+
         this.inputPassword = new Element("id", "input-password");
+        
         
         this.submitUserPasswordButton = new IconButton(app, this, "submit-user-password-button", "arrow_forward");
 
         this.callBackAfterLogin = null;
+        this.PASSWORD_INPUT_PLACEHOLDER = "Enter your password";
     }
 
     setCallBackAfterLogin(callBack) {
@@ -253,6 +249,7 @@ class LoginPage extends Page {
 
     setup() {
         super.setup();
+        this.inputPassword.getElement().placeholder = this.PASSWORD_INPUT_PLACEHOLDER;
         this.inputPassword.addEventListener(["input"], function() {
             if(this.inputPassword.getElement().value) {
                 this.submitUserPasswordButton.enable();
@@ -275,6 +272,10 @@ class LoginPage extends Page {
                 this.submitUserPasswordButton.getElement().click();
             }
         }.bind(this));
+
+        this.loginSkipContentButton.addEventListener(["click"], function() {
+            this.app.goToMainPage(this);
+        }.bind(this));
     }
 
     create() {
@@ -283,10 +284,16 @@ class LoginPage extends Page {
         this.loginContent.appendChild(button);
     }
 
+    hide() {
+        super.hide();
+        this.loginSkipContent.hide();
+    }
+
     show() {
         super.show();
         this.inputPassword.getElement().focus();
         this.submitUserPasswordButton.disable();
+        if(!this.callBackAfterLogin) this.loginSkipContent.show(); //don't show skip if we're approaching login with a callback – when a key is generated after login
     }
 
     _savePasswordToApp(p) {
