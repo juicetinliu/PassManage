@@ -50,7 +50,7 @@ class App {
 
     ___DEBUG_MAIN_PAGE() {
         // FOR DEBUGGING
-        let testEntryStrings = ['Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', ];
+        let testEntryStrings = ['Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]', ];
         let e = this.passManager.entriesFromStrings(testEntryStrings);
         this.passManager.setEntries(e);
 
@@ -197,6 +197,11 @@ class App {
     confirmEditPageEntry(entry, referringPage) {
         this.pages.EditPage.setReferringPage(referringPage);
         this.pages.EditPage.confirmEditEntry(entry);
+    }
+
+    deleteEntry(entry, referringPage) {
+        this.passManager.deletePassEntry(entry);
+        this.goToMainPage(referringPage);
     }
 
     async decryptPassEntryField(field, content, referringPage, component) {

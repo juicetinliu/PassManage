@@ -375,7 +375,7 @@ body {
 
 .header-row {
     font-weight: bold;
-    margin-right: 75px !important;
+    margin-right: 74px !important;
 }
 
 .header-divider {
@@ -393,7 +393,7 @@ body {
 }
 
 .main-entry-more-info-open {
-    height: 150px !important;
+    height: 170px !important;
 }
 
 .main-entry-more-info-content {
@@ -401,7 +401,51 @@ body {
     margin-right: 20px;
     justify-content: space-between;
     align-items: flex-start;
+    flex-wrap: nowrap;
+    gap: 10px;
     width: auto;
+    height: -webkit-fill-available;
+}
+
+.main-entry-more-info-button-content {
+    gap: 15px;
+    flex-wrap: nowrap;
+}
+
+.delete-entry-button {
+    background-color: var(--red);
+}
+
+.delete-entry-button:hover {
+    background-color: var(--highlight-red);
+}
+
+.main-entry-more-info-content-wrapper {
+    overflow-y: auto;
+    height: 100%;
+    width: -webkit-fill-available;
+}
+
+.main-entry-more-info-content-stuff {
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.main-entry-more-info-content-item {
+    flex-wrap: nowrap;
+    gap: 10px;
+    width: auto;
+    min-height: 34px;
+    border: 1px dashed var(--action-blue);
+    padding: 15px;
+}
+
+.main-entry-more-info-content-item-header {
+    font-weight: bold;
+}
+
+.main-entry-more-info-content-item-text {
+    word-break: break-word;
 }
 
 .entry-row {
@@ -441,6 +485,15 @@ body {
 .encrypted-info-text-content-password {
     overflow-x: auto;
     white-space: nowrap;
+}
+
+.encrypted-info-content-secrets {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+}
+
+.encrypted-info-text-content-secrets {
+    word-break: break-word;
 }
 
 /* Custom scrollbar */

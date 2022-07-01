@@ -405,6 +405,10 @@ class EncryptedInformation extends Component {
             text = this.formatEncryptedText();
         } else {
             text = await this.decryptText(this.encryptedInfo);
+            let fieldConfig = this.config.EntryConfig[this.passEntryField];
+            if(fieldConfig.isArray) {
+                text = text.join(", ")
+            }
         }
         if(this.encrypted) { //double check the state in case decryption is complete later but we're back to encrypted
             text = this.formatEncryptedText();
@@ -432,14 +436,30 @@ class MainPassEntryRowMoreInfo extends Component {
         this.MORE_INFO_OPENED_CLASS = "main-entry-more-info-open";
         this.entry = entry;
 
+        this.ITEM_CLASSES = "main-entry-more-info-content-item h hv-c vh-c p-round".split(" ");
+        this.ITEM_HEADER_CLASS = "main-entry-more-info-content-item-header";
+        this.ITEM_TEXT_CLASS = "main-entry-more-info-content-item-text";
+
         this.editEntryButton = new IconButton(app, page, this.tag + "-edit-entry-button", "edit");
-        this.EDIT_ENTRY_BUTTON_CLASS = "entry-row-button";
+        this.deleteEntryButton = new IconButton(app, page, this.tag + "-delete-entry-button", "delete");
+        this.SHELF_BUTTON_CLASS = "entry-row-button";
+        this.DELETE_BUTTON_CLASS = "delete-entry-button";
 
-        this.SECRETS_HIDDEN_TEXT = "********";
         this.SECRETS_HEADER = this.config.EntryConfig.secrets.value;
-        this.secretsEncryptedInformation = new EncryptedInformation(app, page, this.tag, this.SECRETS_HEADER, entry[this.SECRETS_HEADER], this.SECRETS_HIDDEN_TEXT);   
+        this.SECRETS_HIDDEN_TEXT = "********";
 
-        this.CONTENT_CLASSES = "h hv-c vh-c main-entry-more-info-content".split(" ");
+        let entrySecrets = entry[this.SECRETS_HEADER];
+        this.hasSecrets = false;
+
+        if(entrySecrets.length) {
+            this.hasSecrets = true;
+            this.secretsEncryptedInformation = new EncryptedInformation(app, page, this.tag, this.SECRETS_HEADER, entry[this.SECRETS_HEADER], this.SECRETS_HIDDEN_TEXT);   
+        }
+
+        this.CONTENT_SCROLL_CLASS = "main-entry-more-info-content-wrapper";
+        this.CONTENT_CLASSES = "h vh-t main-entry-more-info-content".split(" ");
+
+        this.BUTTON_SHELF_CLASS = "main-entry-more-info-button-content v hv-l vh-c".split(" ");
     }
 
     create() {
@@ -447,43 +467,59 @@ class MainPassEntryRowMoreInfo extends Component {
 
         let contentWrapper = documentCreateElement("div", null, this.CONTENT_CLASSES);
         
+        let scrollWrapper = documentCreateElement("div", null, this.CONTENT_SCROLL_CLASS);
 
-        //NEED A BETTER DESIGN – NOW IT'S JUST A RANDOM DUMP OF NON-TABLED INFORMATION
-        // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        let entryStuff = documentCreateElement("div", null, "v hv-c vh-t".split(" "));
+        let entryStuff = documentCreateElement("div", null, "h hv-l vh-c main-entry-more-info-content-stuff".split(" "));
 
         let passEntryConfig = this.config.EntryConfig;
         passEntryConfig.allFields.forEach(field => {
             let fieldConfig = passEntryConfig[field];
             if(!fieldConfig.forTable) {
-                let thing = documentCreateElement("div");
-                thing.style.width = "280px";
-                if(fieldConfig.isEncrypted) {
-                    let addClasses = "h hv-c vh-c".split(" ");
-                    addClasses.forEach(c => {thing.classList.add(c)});
-                    thing.style.flexWrap = "nowrap";
-                    thing.style.gap = "10px";
-                    
-                    let stuff = this.secretsEncryptedInformation.create();
-                    let secret = documentCreateElement("div");
-                    secret.innerHTML = this.SECRETS_HEADER + ": ";
+                let thing = documentCreateElement("div", null, this.ITEM_CLASSES);
+                let header = documentCreateElement("div", null, this.ITEM_HEADER_CLASS);
+                header.innerHTML = fieldConfig.title + ": ";
+                thing.appendChild(header);
 
-                    thing.appendChild(secret);
-                    thing.appendChild(stuff);
+                let content = null;
+                if(field === this.SECRETS_HEADER){
+                    if(this.hasSecrets) {
+                        content = this.secretsEncryptedInformation.create();
+                    }
                 } else {
-                    thing.innerHTML = field + ": " + this.entry[field];
+                    let passContent = this.entry[field];
+                    if(fieldConfig.isArray) {
+                        if(passContent.length) {
+                            content = documentCreateElement("div", null, this.ITEM_TEXT_CLASS);
+                            content.innerHTML = passContent.join(", ");
+                        }
+                    } else {
+                        if(passContent) {
+                            content = documentCreateElement("div", null, this.ITEM_TEXT_CLASS);
+                            content.innerHTML = passContent;
+                        }
+                    }
                 }
-                entryStuff.appendChild(thing);
+                if(content) {
+                    thing.appendChild(content);
+                    entryStuff.appendChild(thing);
+                }
             }
         });
-        
-        contentWrapper.appendChild(entryStuff)
-        //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        scrollWrapper.appendChild(entryStuff);
+        contentWrapper.appendChild(scrollWrapper)
+
+        let buttonShelf = documentCreateElement("div", null, this.BUTTON_SHELF_CLASS);
 
         let editEntryButton = this.editEntryButton.create();
-        editEntryButton.classList.add(this.EDIT_ENTRY_BUTTON_CLASS);
-        contentWrapper.appendChild(editEntryButton);
+        editEntryButton.classList.add(this.SHELF_BUTTON_CLASS);
+        buttonShelf.appendChild(editEntryButton);
 
+        let deleteEntryButton = this.deleteEntryButton.create();
+        deleteEntryButton.classList.add(this.DELETE_BUTTON_CLASS);
+        deleteEntryButton.classList.add(this.SHELF_BUTTON_CLASS);
+        buttonShelf.appendChild(deleteEntryButton);
+
+        contentWrapper.appendChild(buttonShelf);
         element.appendChild(contentWrapper);
         return element;
     }
@@ -496,10 +532,14 @@ class MainPassEntryRowMoreInfo extends Component {
         this.getElement().classList.add(this.MORE_INFO_OPENED_CLASS);    }
 
     setup() {
-        this.secretsEncryptedInformation.setup();
+        if(this.hasSecrets) this.secretsEncryptedInformation.setup();
         this.editEntryButton.addEventListener(['click'], function() {
             this.app.goToEditPage("edit", this.page, this.entry);
         }.bind(this));
+
+        this.deleteEntryButton.addEventListener(['click'], function() {
+            this.app.deleteEntry(this.entry, this.page);
+        }.bind(this))
     }
 }
 
@@ -616,11 +656,12 @@ class MainHeaderRow extends Component {
         // Create header row
         let element = documentCreateElement("div", this.label, this.ENTRY_ROW_CLASSES);
         element.classList.add(this.HEADER_ROW_CLASS);
+        let entryConfig = this.config.EntryConfig;
 
         // Populate header row with headers
         this.tableHeaders.forEach(header => {
             let headerColElement = documentCreateElement("div", this.HEADER_COL_ID_PREFIX + header, this.ENTRY_COL_CLASS);
-            headerColElement.innerHTML = capitalize(header);
+            headerColElement.innerHTML = entryConfig[header].title;
             element.appendChild(headerColElement);
         })
         return element;
@@ -1054,6 +1095,7 @@ class EditView extends Component {
     create() {
         let element = documentCreateElement("div", this.label, this.EDIT_VIEW_CLASSES);
         element.style.maxHeight = is_mobile_or_tablet_view() ? "60vh" : "600px";
+        let entryConfig = this.config.EntryConfig;
 
         Object.entries(this.inputs).forEach(entry => {
             let header = entry[0];
@@ -1063,7 +1105,7 @@ class EditView extends Component {
 
             let rowHeader = documentCreateElement("div", null, this.EDIT_VIEW_ROW_HEADER_CLASS);
 
-            rowHeader.innerHTML = capitalize(header) + ":";
+            rowHeader.innerHTML = entryConfig[header].title + ":";
 
             let inputElement = input.create();
             inputElement.classList.add(this.EDIT_VIEW_ROW_INPUT_CLASS);
@@ -1113,15 +1155,19 @@ class EditView extends Component {
     }
 
     validateValues(entry) {
-        if(!entry.tag) {
+        let entryTag = entry.tag;
+        if(!entryTag || entryTag.match(/^ *$/)) {
             throw new Error("Entry must have a tag");
         }
+        if(entryTag.includes(" ")) {
+            throw new Error("Tag must not contain whitespace");
+        }
         if(this.action === this.actionTypes.ADD) {
-            if(this.app.passManager.entryAlreadyExistsWithTag(entry.tag)) {
+            if(this.app.passManager.entryAlreadyExistsWithTag(entryTag)) {
                 throw new Error("ADD: Entry cannot have same tag as existing entries");
             }
         } else if(this.action === this.actionTypes.EDIT) {
-            if(this.app.passManager.entryAlreadyExistsWithTag(entry.tag, this.page.editEntry.tag)) {
+            if(this.app.passManager.entryAlreadyExistsWithTag(entryTag, this.page.editEntry.tag)) {
                 throw new Error("EDIT: Entry cannot have same tag as existing entries");
             }
         }

@@ -2,15 +2,15 @@
 //https://cryptojs.gitbook.io/docs/
 //https://www.youtube.com/watch?v=KQjf9get6PE
 const PassEntryConfig = {
-    tag:        {value: "tag",      isEncrypted: false, isArray: false, forTable: (e) => e.tag, }, 
-    website:    {value: "website",  isEncrypted: false, isArray: false, forTable: (e) => e.website, }, 
-    username:   {value: "username", isEncrypted: false, isArray: false, forTable: (e) => e.username ? e.username : e.email, }, 
-    email:      {value: "email",    isEncrypted: false, isArray: false, forTable: null}, 
-    altEmail:   {value: "altEmail", isEncrypted: false, isArray: false, forTable: null}, 
-    password:   {value: "password", isEncrypted: true,  isArray: false, forTable: (e) => e.password}, 
-    secrets:    {value: "secrets",  isEncrypted: true,  isArray: true,  forTable: null}, 
-    hints:      {value: "hints",    isEncrypted: false, isArray: true,  forTable: null}, 
-    comments:   {value: "comments", isEncrypted: false, isArray: true,  forTable: null},
+    tag:        {value: "tag",      title:"Tag",       isEncrypted: false, isArray: false, forTable: (e) => e.tag, }, 
+    website:    {value: "website",  title:"Website",   isEncrypted: false, isArray: false, forTable: (e) => e.website, }, 
+    username:   {value: "username", title:"Username",  isEncrypted: false, isArray: false, forTable: (e) => e.username ? e.username : e.email, }, 
+    email:      {value: "email",    title:"Email",     isEncrypted: false, isArray: false, forTable: null}, 
+    altEmail:   {value: "altEmail", title:"Email(other)",  isEncrypted: false, isArray: false, forTable: null}, 
+    password:   {value: "password", title:"Password",  isEncrypted: true,  isArray: false, forTable: (e) => e.password}, 
+    secrets:    {value: "secrets",  title:"Secrets",   isEncrypted: true,  isArray: true,  forTable: null}, 
+    hints:      {value: "hints",    title:"Hints",     isEncrypted: false, isArray: true,  forTable: null}, 
+    comments:   {value: "comments", title:"Comments",  isEncrypted: false, isArray: true,  forTable: null},
     
     allFields: ["tag", "website", "username", "email", "altEmail", "password", "secrets", "hints", "comments"]
 }
@@ -96,10 +96,12 @@ class PassEntry {
         let out = new PassEntry();
         entryConfig.allFields.forEach((field, index) => {
             let value = values[index];
-            if(entryConfig[field].isArray) {
-                value.split(this.config.PassEntryArraySeparator).forEach(val => out.addOrSaveToField(field, val));
-            } else {
-                out.addOrSaveToField(field, value);
+            if(value) {
+                if(entryConfig[field].isArray) {
+                    value.split(this.config.PassEntryArraySeparator).forEach(val => out.addOrSaveToField(field, val));
+                } else {
+                    out.addOrSaveToField(field, value);
+                }
             }
         });
         return out;
@@ -319,10 +321,9 @@ class PassManager {
         return out;
     }
 
-    destroyUnhashedData() {
-        this.entries.forEach(e => {
-            e.destroyUnhashedData();
-        })
+    deletePassEntry(entry) {
+        let deleteIndex = this.entryAlreadyExistsWithTag(entry.tag, null, true);
+        this.entries.splice(deleteIndex, 1);
     }
 
     isPassEntryFieldValid(field) {
@@ -430,7 +431,9 @@ class PassSearchRanker {
             let distB = this._levenshteinDistance(searchText, b.tag);
             return distA - distB;
         }.bind(this));
-        return copyEntries;
+
+        let returnEntries = copyEntries.splice(0, 5);
+        return returnEntries;
     }
 
     // https://www.30secondsofcode.org/js/s/levenshtein-distance
@@ -484,7 +487,7 @@ class AESHandler extends PassHandler {
     }
 }
 
-class PassFile { //encrypt/decrypt with appToken
+class PassFile { // encrypt/decrypt with appToken
     constructor(raw = "", config = PassConfig) {
         this.config = config;
         this.passHandler = new AESHandler();
@@ -586,32 +589,6 @@ class PassFile { //encrypt/decrypt with appToken
     }
 }
 
-function runTestCases(){
-    let testPassEntryString = "Fb[|]website[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
-    let testPassEntryString1 = "[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
-    let testPassEntryString2 = "tag0[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
-
-    let testPassEntry = new PassEntry();
-
-    if(testPassEntry.fromString(testPassEntryString).toString() !== testPassEntryString) throw new Error ("Something is wrong with PassEntry string conversion");
-
-    let testPassManager = new PassManager();
-
-    testPassManager.entries = testPassManager.entriesFromStrings([testPassEntryString]);
-    if(testPassManager._entriesToString() !== testPassEntryString) throw new Error ("Something is wrong with PassManager string conversion");
-
-    testPassManager.entries = testPassManager.entriesFromStrings([testPassEntryString1]);
-    if(testPassManager._entriesToString() !== testPassEntryString2) throw new Error ("Something is wrong with PassManager string conversion – uniquelyIdentifyEntries");
-
-    console.log("All tests passed");
-
-    testPassManager.close();
-}
-
-function capitalize(str) {
-    return str[0].toUpperCase() + str.slice(1);
-}
-
 class SimpleTimer {
     constructor(duration, stepInterval = 1000) {
         this.duration = duration;
@@ -655,3 +632,24 @@ class SimpleTimer {
     }
 }
 
+function runTestCases(){
+    let testPassEntryString = "Fb[|]website[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
+    let testPassEntryString1 = "[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
+    let testPassEntryString2 = "tag0[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
+
+    let testPassEntry = new PassEntry();
+
+    if(testPassEntry.fromString(testPassEntryString).toString() !== testPassEntryString) throw new Error ("Something is wrong with PassEntry string conversion");
+
+    let testPassManager = new PassManager();
+
+    testPassManager.entries = testPassManager.entriesFromStrings([testPassEntryString]);
+    if(testPassManager._entriesToString() !== testPassEntryString) throw new Error ("Something is wrong with PassManager string conversion");
+
+    testPassManager.entries = testPassManager.entriesFromStrings([testPassEntryString1]);
+    if(testPassManager._entriesToString() !== testPassEntryString2) throw new Error ("Something is wrong with PassManager string conversion – uniquelyIdentifyEntries");
+
+    console.log("All tests passed");
+
+    testPassManager.close();
+}
