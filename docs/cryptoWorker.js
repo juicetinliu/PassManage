@@ -4,7 +4,7 @@ importScripts('crypto.js');
 let completedJobsWithResultCache = [];
 
 let debug = false;
-let CLEAR_CACHE_TIMEOUT_MS = 5 * 1000; //WORKER ONLY KEEPS RESULT FOR 5 SECONDS SINCE PASSMANAGER HAS ITS OWN CACHE (about the time it takes to calculate pbkdf2)
+let CLEAR_CACHE_TIMEOUT_MS = 2 * 1000; //WORKER ONLY KEEPS RESULT FOR 5 SECONDS SINCE PASSMANAGER HAS ITS OWN CACHE (about the time it takes to calculate pbkdf2)
 
 onmessage = function(e) {
     let jobID = e.data[0]

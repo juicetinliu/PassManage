@@ -207,7 +207,7 @@ body {
 }
 
 #input-password {
-    width: 160px;
+    width: 170px;
 }
 
 #login-page-skip-spacer-text {
@@ -252,6 +252,22 @@ body {
 
 .drop-panel-text-padding {
     margin-top: 50px;
+}
+
+#cancel-password-file-button {
+    background-color: var(--red);
+}
+
+#cancel-password-file-button:hover {
+    background-color: var(--highlight-red);
+}
+
+#confirm-password-file-button {
+    background-color: var(--green);
+}
+
+#confirm-password-file-button:hover {
+    background-color: var(--highlight-green);
 }
 
 /* Edit page styles */
@@ -332,6 +348,32 @@ body {
     margin-left: auto;
 }
 
+#main-page-option-key-indicator-timer {
+    color: var(--disabled-text-color);
+    opacity: 0;
+    max-width: 0px;
+    transition: max-width 0.5s, opacity 0.3s ease-in;
+    overflow: hidden;
+}
+
+.main-page-option-key-indicator-timer-show {
+    opacity: 1.0 !important;
+    max-width: 100px !important;
+}
+
+#main-page-option-key-indicator-button {
+    position: relative;
+    margin: 15px 10px;
+}
+
+#main-page-option-key-indicator-button:hover {
+    background-color: var(--not-too-white);
+}
+
+#main-page-option-key-indicator-button:focus #key-button-progress-indicator-rect {
+    stroke: -webkit-focus-ring-color;
+}
+
 #main-page-option-download {
     
 }
@@ -393,7 +435,7 @@ body {
 }
 
 .main-entry-more-info-open {
-    height: 170px !important;
+    height: 130px !important;
 }
 
 .main-entry-more-info-content {

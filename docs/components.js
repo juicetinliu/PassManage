@@ -373,31 +373,37 @@ class EncryptedInformation extends Component {
     setup() {
         if(!this.encryptedInfo) return;
 
-        this.toggleButton.addEventListener(['click'], async function() {
+        this.toggleButton.addEventListener(['click'], function() {
             this.encrypted = !this.encrypted;
-            this.toggleButton.toggleVisiblity(this.encrypted);
-            this.encryptedInfoText.getElement().innerHTML = "";
-            this.loader.show();
-
-            try {
-                await this.setTextAsync();
-            } catch(e) {
-                if(e instanceof AppError) {
-                    if(e.isType(AppErrorType.GENERATING_MASTER_KEY)) {
-                        console.log(e);
-                        this.encrypted = !this.encrypted; //change back to previous state
-                        await this.setTextAsync();
-                    } else if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
-                        console.log(e);
-                        this.encrypted = !this.encrypted; //change back to previous state
-                    }
-                }
-            }
-            this.loader.hide();
+            this.toggleEncryption(this.encrypted);
         }.bind(this));
     }
 
+    async toggleEncryption(encrypted) {
+        this.toggleButton.toggleVisiblity(encrypted);
+        this.encryptedInfoText.getElement().innerHTML = "";
+        this.loader.show();
+
+        try {
+            await this.setTextAsync();
+        } catch(e) {
+            if(e instanceof AppError) {
+                if(e.isType(AppErrorType.GENERATING_MASTER_KEY) || e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
+                    console.log(e);
+                    this.encrypted = !this.encrypted; //change back to previous state
+                    await this.setTextAsync();
+                    this.toggleButton.toggleVisiblity(this.encrypted);
+                }
+            } else {
+                throw e;
+            }
+        }
+        //check for existence in case entry is deleted after decryption
+        if(this.exists()) this.loader.hide();
+    }
+
     async setTextAsync() {
+        let encryptedInfoTextElement = this.encryptedInfoText.getElement(); //fetch element in the beginning to avoid assigning text when table is updated and new rows entries are created (this function is still tied to old row entry)
         if(!this.encryptedInfo) return this.emptyFieldText;
 
         let text;
@@ -409,11 +415,12 @@ class EncryptedInformation extends Component {
             if(fieldConfig.isArray) {
                 text = text.join(", ")
             }
+            if(this.encrypted) { //double check the state in case decryption is completed later but we're back to an encrypted state
+                text = this.formatEncryptedText();
+            }
         }
-        if(this.encrypted) { //double check the state in case decryption is complete later but we're back to encrypted
-            text = this.formatEncryptedText();
-        }
-        this.encryptedInfoText.getElement().innerHTML = text;
+        //check for existence in case entry is deleted after decryption
+        if(this.exists()) encryptedInfoTextElement.innerHTML = text;
     }
 
     async decryptText(text) {
@@ -424,6 +431,11 @@ class EncryptedInformation extends Component {
         if(!this.encryptedInfo) return this.emptyFieldText;
 
         return this.encryptedPlaceholderText ? this.encryptedPlaceholderText : this.encryptedInfo;
+    }
+
+    forceEncrypt() {
+        this.encrypted = true;
+        if(this.encryptedInfo) this.toggleEncryption(this.encrypted);
     }
 }
 
@@ -541,6 +553,10 @@ class MainPassEntryRowMoreInfo extends Component {
             this.app.deleteEntry(this.entry, this.page);
         }.bind(this))
     }
+
+    forceEncrypt() {
+        if(this.secretsEncryptedInformation) this.secretsEncryptedInformation.forceEncrypt();
+    }
 }
 
 class MainPassEntryRow extends Component {
@@ -637,6 +653,11 @@ class MainPassEntryRow extends Component {
             this.showMoreButton.setIcon(this.SHOW_MORE_ICON_NAME);
             this.moreInfo.close();
         }
+    }
+
+    forceEncrypt() {
+        this.passwordEncryptedInformation.forceEncrypt();
+        this.moreInfo.forceEncrypt();
     }
 }
 
@@ -783,15 +804,29 @@ class MainTable extends Component {
             this.app.goToEditPage("add", this.page);
         }.bind(this));
     }
+
+    forceEncrypt() {
+        this.passEntryRows.forEach(p => p.forceEncrypt());
+    }
 }
 
 class MainOptionsKeyIndicator extends Component {
     constructor(app, page) {
         super("id", "main-page-option-key-indicator", page, app);
 
-        this.KEY_VALID_ICON_NAME = "key";
-        this.KEY_INVALID_ICON_NAME = "key_off";
+        this.KEY_VALID_ICON_NAME = "lock_open";
+        this.KEY_INVALID_ICON_NAME = "lock";
         this.button = new IconButton(app, page, "main-page-option-key-indicator-button", this.KEY_INVALID_ICON_NAME);
+
+        this.INDICATOR_WRAPPER_CLASSES = "h hv-r vh-c".split(" ");
+
+        this.HIDE_TIMER_TEXT_DELAY_MS = 3000;
+        this.showIndicatorTimerTextTimeout = null;
+        this.NO_KEY_TEXT = "Locked";
+        this.HELPER_TEXT = "Hold to refresh";
+        this.INDICATOR_TIMER_ID = "main-page-option-key-indicator-timer";
+        this.INDICATOR_TIMER_SHOW_CLASS = "main-page-option-key-indicator-timer-show";
+        this.indicatorTimerText = new Element("id", this.INDICATOR_TIMER_ID);
 
         this.SVG_INDICATOR_LOADING_ID = "key-button-progress-indicator-loading";
         this.SVG_RECT_LOADING_ID = this.SVG_INDICATOR_LOADING_ID + "-rect";
@@ -805,7 +840,7 @@ class MainOptionsKeyIndicator extends Component {
         this.INDICATOR_ZERO_CLASS = "key-button-progress-indicator-zero";
         this.INDICATOR_ELEMENT_MAX_VALUE = 110;
 
-        this.percentage = 0;
+        this.indicatorPercentage = 0;
 
         this.longPressTimeout = null;
         this.longPressed = false;
@@ -814,6 +849,15 @@ class MainOptionsKeyIndicator extends Component {
 
     create() {
         let element = documentCreateElement("div", this.label);
+        element.title = this.NO_KEY_TEXT;
+
+        let wrapper = documentCreateElement("div", null, this.INDICATOR_WRAPPER_CLASSES);
+
+        let timerText = documentCreateElement("div", this.INDICATOR_TIMER_ID);
+        timerText.innerHTML = this.NO_KEY_TEXT;
+
+        wrapper.appendChild(timerText);
+
         let button = this.button.create();
 
         //https://stackoverflow.com/questions/17520337/dynamically-rendered-svg-is-not-displaying
@@ -836,32 +880,35 @@ class MainOptionsKeyIndicator extends Component {
 
         indicatorLoading.appendChild(rectLoading);
         button.appendChild(indicatorLoading);
-        element.appendChild(button);
+        wrapper.appendChild(button);
 
+        element.appendChild(wrapper);
         return element;
     }
 
     setup() {
         this.app.passCacheTimer.addCallBack(this.setCacheIndicatorCallBack.bind(this));
+        this.app.passCacheTimer.addCallBack(this.fetchTimerValue.bind(this));
         
         this.button.addEventListener(["click"], async function() {
             if(this.longPressTimeout) {
                 clearTimeout(this.longPressTimeout);
                 this.longPressTimeout = null;
             }
-            if(!this.longPressed) {
-                if(this.percentage > 0) {
-
+            if(!this.longPressed) { //CLICKED
+                if(this.indicatorPercentage > 0) {
+                    this.app.CLEAR_CACHED_MASTER_KEY();
                 } else {
                     this.indicatorLoadingElement.show();
                     await this.app.generateMasterKey(this.page);
+                    this.showIndicatorTimerText(true);
                     this.indicatorLoadingElement.hide();
                 }
             }
         }.bind(this));
 
-        this.button.addEventListener(["mouseup", "mouseout"], function() {
-            if(this.longPressTimeout) {
+        this.button.addEventListener(["mouseup", "mouseout", "mouseleave"], function() {
+            if(this.longPressTimeout) { //CANCEL LONG PRESS
                 clearTimeout(this.longPressTimeout);
                 this.longPressTimeout = null;
                 this.longPressed = false;
@@ -874,21 +921,73 @@ class MainOptionsKeyIndicator extends Component {
             }
             this.longPressed = false;
         
-            if(!this.longPressTimeout) {
+            if(!this.longPressTimeout) { //LONG PRESSED
                 this.longPressTimeout = setTimeout(async function() {
                     this.longPressed = true;
                     this.longPressTimeout = null;
 
-                    if(this.percentage > 0) {
+                    if(this.indicatorPercentage > 0) {
                         this.app.REFRESH_CACHED_MASTER_KEY_TIMEOUT();
                     } else {
                         this.indicatorLoadingElement.show();
                         await this.app.generateMasterKey(this.page);
+                        this.showIndicatorTimerText(true);
                         this.indicatorLoadingElement.hide();
                     }
                 }.bind(this), this.LONG_PRESS_DELAY_MS);
             }
         }.bind(this));
+
+        this.button.addEventListener(["mouseenter", "mouseover"], function() {
+            this.showIndicatorTimerText(false);
+        }.bind(this))
+
+        this.button.addEventListener(["mouseleave", "mouseout"], function() {
+            this.hideIndicatorTimerText(true);
+        }.bind(this))
+    }
+
+    fetchTimerValue(time) {
+        let text;
+        let hoverText;
+        if(time === 0) {
+            text = this.NO_KEY_TEXT;
+            hoverText = this.NO_KEY_TEXT;
+        } else {
+            let minutes = (parseInt(time / 60)).toString().padStart(2, '0');
+            let seconds = (time % 60).toString().padStart(2, '0');
+            text = minutes + ":" + seconds;
+            hoverText = this.HELPER_TEXT;
+        }
+        this.indicatorTimerText.getElement().innerHTML = text;
+        this.getElement().title = hoverText;
+        if(time < 30) this.showIndicatorTimerText(false);
+    }
+
+    showIndicatorTimerText(withHideTimeout) {
+        this._clearIndicatorTimerTextTimeout();
+        this.indicatorTimerText.getElement().classList.add(this.INDICATOR_TIMER_SHOW_CLASS);
+        if(withHideTimeout) {
+            this.hideIndicatorTimerText(true);
+        }
+    }
+
+    hideIndicatorTimerText(withTimeout) {
+        this._clearIndicatorTimerTextTimeout();
+        if(withTimeout) {
+            this.showIndicatorTimerTextTimeout = setTimeout(function() {
+                this.indicatorTimerText.getElement().classList.remove(this.INDICATOR_TIMER_SHOW_CLASS);
+            }.bind(this), this.HIDE_TIMER_TEXT_DELAY_MS);
+        } else {
+            this.indicatorTimerText.getElement().classList.remove(this.INDICATOR_TIMER_SHOW_CLASS);
+        }
+    }
+
+    _clearIndicatorTimerTextTimeout() {
+        if(this.showIndicatorTimerTextTimeout) {
+            clearTimeout(this.showIndicatorTimerTextTimeout);
+            this.showIndicatorTimerTextTimeout = null;
+        }
     }
 
     setCacheIndicatorCallBack(time) {
@@ -899,7 +998,7 @@ class MainOptionsKeyIndicator extends Component {
     setIndicator(percentage) {
         percentage = parseInt(percentage);
         if(percentage > 100 || percentage < 0) throw new Error("Invalid percentage for indicator:" + percentage);
-        this.percentage = percentage;
+        this.indicatorPercentage = percentage;
 
         let element = this.indicatorElement.getElement();
         if(percentage === 0) {
@@ -971,6 +1070,7 @@ class MainOptionsSearch extends Component {
             this.icon.getElement().classList.add(this.ICON_DISABLED_CLASS);
             this.input.getElement().style.width = "250px";
             this.page.closeAllMoreInfosAndScrollToTop();
+            this.page.forceEncrypt();
         } else {
             if(!this.getSearchValue()) {
                 this.icon.getElement().classList.remove(this.ICON_DISABLED_CLASS);
@@ -994,10 +1094,12 @@ class MainOptionsDownload extends Component {
     constructor(app, page) {
         super("id", "main-page-option-download", page, app);
         this.button = new IconButton(app, page, "main-page-option-download-button", "download");
+        this.HELPER_TEXT = "Download file";
     }
 
     create() {
         let element = documentCreateElement("div", this.label);
+        element.title = this.HELPER_TEXT;
         element.appendChild(this.button.create());
 
         return element;
@@ -1087,9 +1189,9 @@ class EditView extends Component {
         this.EDIT_VIEW_FOOTER_ROW_CLASSES = "h hv-c vh-c edit-view-row".split(" ");
 
         this.PASSWORD_HEADER = passEntryConfig.password.value;
-        this.EDIT_PASSWORD_MESSAGE = "Type to change old password";
+        this.EDIT_PASSWORD_MESSAGE = "Type to change password";
         this.SECRETS_HEADER = passEntryConfig.secrets.value;
-        this.EDIT_SECRETS_MESSAGE = "Type to change old secrets";
+        this.EDIT_SECRETS_MESSAGE = "Type to change secrets";
     }
 
     create() {

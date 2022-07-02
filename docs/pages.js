@@ -49,11 +49,25 @@ class IntroPage extends Page {
 
     setup() {
         this.startNewButton.addEventListener(["click"], function() {
+            this.app.keyCreated = false;
             this.app.goToMainPage(this, false);
         }.bind(this));
 
         this.fromFileButton.addEventListener(["click"], function() {
+            this.app.keyCreated = true;
             this.app.goToDropPage(this);
+        }.bind(this));
+
+        this.startNewButton.addEventListener(["keydown"], function(event) {
+            if(event.key === 'Space' || event.keyCode === 32 || event.key === 'Enter' || event.keyCode === 13){
+                this.startNewButton.getElement().click();
+            }
+        }.bind(this));
+
+        this.fromFileButton.addEventListener(["keydown"], function(event) {
+            if(event.key === 'Space' || event.keyCode === 32 || event.key === 'Enter' || event.keyCode === 13){
+                this.fromFileButton.getElement().click();
+            }
         }.bind(this));
     }
 
@@ -104,10 +118,12 @@ class EditPage extends Page {
         this.editEntry = editEntry;
     }
 
-    show() {
-        this.components.editView.reset();
-        if(this.action === this.actionTypes.EDIT && this.editEntry) {
-            this.components.editView.populateInputs(this.editEntry);
+    show(update = true) {
+        if(update) {
+            this.components.editView.reset();
+            if(this.action === this.actionTypes.EDIT && this.editEntry) {
+                this.components.editView.populateInputs(this.editEntry);
+            }
         }
         super.show()
     }
@@ -124,11 +140,14 @@ class EditPage extends Page {
         } else if (this.action === this.actionTypes.EDIT) {
             let diff = this._processEditEntry(entry);
             let changeTag = this.editEntry.tag;
-            this.editEntry = null;
             this.app.editPassEntry(changeTag, diff, this);
         } else {
             throw new Error("Shouldn't reach this in confirmEntry()")
         }
+    }
+
+    completeEditEntry() {
+        this.editEntry = null;
     }
 
     _processEditEntry(entry) { //remove unchanged fields
@@ -187,6 +206,7 @@ class MainPage extends Page {
         super.show();
         if(update) this.updateMainTableEntries(this.app.getPassManagerEntries());
         this.mainOptionsBar.show();
+        this.components.mainKeyIndicator.showIndicatorTimerText(true);
     }
 
     hide() {
@@ -227,6 +247,10 @@ class MainPage extends Page {
         this.components.mainTable.closeAllMoreInfos();
         this.components.mainTable.scrollToEntryContentTop();
     }
+
+    forceEncrypt() {
+        this.components.mainTable.forceEncrypt();
+    }
 }
 
 class LoginPage extends Page {
@@ -237,6 +261,8 @@ class LoginPage extends Page {
 
         this.loginSkipContent = new Element("id", "login-page-skip-content");
         this.loginSkipContentButton = new Element("id", "login-page-skip-button");
+        this.LOGIN_CANCEL_TEXT = "Cancel";
+        this.LOGIN_SKIP_TEXT = "Skip";
 
         this.inputPassword = new Element("id", "input-password");
         
@@ -244,7 +270,8 @@ class LoginPage extends Page {
         this.submitUserPasswordButton = new IconButton(app, this, "submit-user-password-button", "arrow_forward");
 
         this.callBackAfterLogin = null;
-        this.PASSWORD_INPUT_PLACEHOLDER = "Enter your password";
+        this.PASSWORD_INPUT_PLACEHOLDER = "Enter your key 🔑";
+        this.PASSWORD_INPUT_CREATE_PLACEHOLDER = "Create your key 🔑";
     }
 
     setCallBackAfterLogin(callBack) {
@@ -265,9 +292,9 @@ class LoginPage extends Page {
         this.submitUserPasswordButton.addEventListener(["click"], function() {
             let pw = this.inputPassword.getElement().value;
             this.validatePassword(pw);
-            this.inputPassword.getElement().value = "";
-
+            this._clearPasswordInput();
             this._savePasswordToApp(pw);
+            this.callBackAfterLogin = null;
         }.bind(this));
 
         // https://stackoverflow.com/questions/7060750/detect-the-enter-key-in-a-text-input-field
@@ -278,8 +305,24 @@ class LoginPage extends Page {
         }.bind(this));
 
         this.loginSkipContentButton.addEventListener(["click"], function() {
-            this.app.goToMainPage(this);
+            this._clearPasswordInput();
+            if(!this.callBackAfterLogin) {//If there is no callBack then we must be entering login from fileDrop – make sure to direct to main view
+                this.app.goToMainPage(this);
+            } else {//Otherwise callBack must be from a referring page – we allow a cancel to bring user back to referring page
+                //We make sure not to update the referring page to keep its previous state
+                this.referringPage.show(false);
+            }
         }.bind(this));
+
+        this.loginSkipContentButton.addEventListener(["keydown"], function(event) {
+            if(event.key === 'Space' || event.keyCode === 32 || event.key === 'Enter' || event.keyCode === 13){
+                this.loginSkipContentButton.getElement().click();
+            }
+        }.bind(this));
+    }
+
+    _clearPasswordInput() {
+        this.inputPassword.getElement().value = "";
     }
 
     create() {
@@ -295,9 +338,17 @@ class LoginPage extends Page {
 
     show() {
         super.show();
+        this.inputPassword.getElement().placeholder = this.app.keyCreated ? this.PASSWORD_INPUT_PLACEHOLDER : this.PASSWORD_INPUT_CREATE_PLACEHOLDER;
+
         this.inputPassword.getElement().focus();
         this.submitUserPasswordButton.disable();
-        if(!this.callBackAfterLogin) this.loginSkipContent.show(); //don't show skip if we're approaching login with a callback – when a key is generated after login
+        if(!this.callBackAfterLogin) { //If there is no callBack then we must be entering login from fileDrop - we allow a skip straight to main view
+            this.loginSkipContentButton.getElement().innerHTML = this.LOGIN_SKIP_TEXT;
+            this.loginSkipContent.show();
+        } else { //Otherwise callBack must be from a referring page – we allow a cancel to bring user back to referring page 
+            this.loginSkipContentButton.getElement().innerHTML = this.LOGIN_CANCEL_TEXT;
+            this.loginSkipContent.show();
+        }
     }
 
     _savePasswordToApp(p) {

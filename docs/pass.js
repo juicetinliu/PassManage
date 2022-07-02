@@ -141,11 +141,12 @@ class PassManager {
         this.CLEAR_DESTROY_CACHED_MASTER_KEY_TIMEOUT();
         if(withTimeout) {
             this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = setTimeout(function() {
-                this.CACHED_MASTER_KEY = null;
+                this.deleteMasterPasswordHashAndKey();
             }.bind(this), this.CACHE_MASTER_KEY_DURATION_MS);
             this.app.passCacheTimer.start();
         } else {
-            this.CACHED_MASTER_KEY = null;
+            this.deleteMasterPasswordHashAndKey();
+            this.app.passCacheTimer.stop();
         }
     }
 
@@ -164,6 +165,12 @@ class PassManager {
 
     saveMasterPasswordToHash(masterPassword) {
         this.masterPasswordHash = CryptoJS.SHA256(masterPassword).toString(this.config.SHA256ToStringEncoding);
+    }
+
+    deleteMasterPasswordHashAndKey() {
+        this.CACHED_MASTER_KEY = null;
+        this.masterPasswordHash = null;
+        this.app.forceEncryptMainTable();
     }
 
     _generateSecrets() {
@@ -453,8 +460,6 @@ class PassSearchRanker {
         }
         return arr[t.length][s.length];
     };
-
-
 }
 
 class PassHandler {
@@ -483,7 +488,14 @@ class AESHandler extends PassHandler {
     }
 
     _hashToString(hash, encoder) {
-        return hash.toString(encoder)
+        let returnVal;
+        try {
+            returnVal = hash.toString(encoder);
+        } catch(e) {
+            returnVal = "";
+            console.log(e);
+        }
+        return returnVal;
     }
 }
 
@@ -625,6 +637,11 @@ class SimpleTimer {
             clearTimeout(this.timeout); //clear last timeout
             this.timeout = null;
         }
+    }
+
+    stop() {
+        this.reset();
+        this.callBacks.forEach(c => c(0));
     }
 
     addCallBack(callBack) {

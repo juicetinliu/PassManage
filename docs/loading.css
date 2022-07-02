@@ -112,14 +112,6 @@
     }
 }
 
-#main-page-option-key-indicator-button {
-    position: relative;
-}
-
-#main-page-option-key-indicator-button:hover {
-    background-color: var(--not-too-white);
-}
-
 #key-button-progress-indicator-loading {
     position: absolute;
     top: -10;

@@ -18,6 +18,8 @@ class App {
 
         Object.values(this.pages).forEach(p => p.setAppPages(this.pages));
 
+        this.keyCreated = false;
+
         this.rawPassFile = null;
         this.passFile = null;
 
@@ -73,6 +75,7 @@ class App {
     }
 
     savePasswordToPassManager(pw, referringPage, callBack) {
+        this.keyCreated = true;
         this.hideAllPages();
         this.mainLoading.show();
 
@@ -191,6 +194,7 @@ class App {
             }
             throw e;
         }
+        this.pages.EditPage.completeEditEntry();
         this.goToMainPage(referringPage);
     }
 
@@ -211,7 +215,7 @@ class App {
         } catch (e) {
             if(e instanceof AppError) {
                 if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
-                    let callBackAfterLogin = async (refPage) => {
+                    let callBackAfterLogin = (refPage) => {
                         component.toggleButton.getElement().click();
                         this.goToMainPage(refPage, false);
                     };
@@ -222,6 +226,14 @@ class App {
             throw e;
         }
         return decryptedField;
+    }
+
+    forceEncryptMainTable() {
+        this.pages.MainPage.forceEncrypt();
+    }
+
+    CLEAR_CACHED_MASTER_KEY() {
+        this.passManager.DESTROY_CACHED_MASTER_KEY(false);
     }
 
     REFRESH_CACHED_MASTER_KEY_TIMEOUT() {
