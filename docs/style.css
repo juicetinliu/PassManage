@@ -370,7 +370,12 @@ body {
     background-color: var(--not-too-white);
 }
 
-#main-page-option-key-indicator-button:focus #key-button-progress-indicator-rect {
+#main-page-option-key-indicator-button:active {
+    background-color: var(--action-blue);
+    box-shadow: none;
+}
+
+#main-page-option-key-indicator-button:focus-visible #key-button-progress-indicator-rect {
     stroke: -webkit-focus-ring-color;
 }
 
