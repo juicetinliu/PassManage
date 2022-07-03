@@ -2,7 +2,7 @@ class App {
     constructor() {
         this.passManager = new PassManager(this);
 
-        this.appToken = "password";
+        this.appToken = "appToken";
 
         this.main = new Element("id", "main");
         this.mainPanel = new Element("id", "main-panel");
@@ -269,7 +269,7 @@ class App {
             if(e instanceof AppError) {
                 if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
                     let callBackAfterLogin = (refPage) => {
-                        component.toggleButton.getElement().click();
+                        component.getElement().click();
                         this.goToMainPage(null, false);
                     };
                     this.goToLoginPage(referringPage, callBackAfterLogin);
@@ -293,7 +293,7 @@ class App {
         this.passManager.RESET_DESTROY_CACHED_MASTER_KEY_TIMEOUT();
     }
 
-    async generateMasterKey(referringPage) {
+    async generateMasterKeyForIndicator(referringPage, component) {
         this.disableDraggbleMenuBackButton();
 
         try {
@@ -302,7 +302,7 @@ class App {
             if(e instanceof AppError) {
                 if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
                     let callBackAfterLogin = async (refPage) => {
-                        await this.generateMasterKey(refPage);
+                        component.getElement().click();
                         this.goToMainPage(null, false);
                     };
                     this.goToLoginPage(referringPage, callBackAfterLogin);

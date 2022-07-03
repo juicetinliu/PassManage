@@ -1,17 +1,31 @@
 .tooltip {
     --tooltip-border-px: 5px;
     --tooltip-pointer-height-px: 5px;
+    --tooltip-border-color: var(--highlight-blue) !important;
+    --tooltip-pointer-color: var(--highlight-blue) !important;
+
     background-color: var(--not-too-white);
+    cursor: default;
+    border: var(--tooltip-border-px) solid var(--tooltip-border-color);
     color: var(--text-color);
     padding: 5px 10px;
-    border-radius: 5px;
-    border: var(--tooltip-border-px) solid var(--red);
+    border-radius: var(--roundness);
     position: absolute;
     z-index: 10;
     opacity: 0.0;
     width: fit-content;
     transition: opacity 0.5s, visibility 0.5s;
     visibility: hidden;
+}
+
+.tooltip-default {
+    --tooltip-border-color: var(--highlight-blue) !important;
+    --tooltip-pointer-color: var(--highlight-blue) !important;
+}
+
+.tooltip-error {
+    --tooltip-border-color: var(--red) !important;
+    --tooltip-pointer-color: var(--red) !important;
 }
 
 .tooltip-show {
@@ -33,7 +47,7 @@
     margin-top: calc(0px - var(--tooltip-pointer-height-px) - var(--tooltip-border-px));
     border-width: calc(var(--tooltip-pointer-height-px) + var(--tooltip-border-px));
     border-style: solid;
-    border-color: transparent var(--red) transparent transparent;
+    border-color: transparent var(--tooltip-pointer-color) transparent transparent;
 }
 
 .tooltip-left {
@@ -50,7 +64,7 @@
     margin-top: calc(0px - var(--tooltip-pointer-height-px) - var(--tooltip-border-px));
     border-width: calc(var(--tooltip-pointer-height-px) + var(--tooltip-border-px));
     border-style: solid;
-    border-color: transparent transparent transparent var(--red);
+    border-color: transparent transparent transparent var(--tooltip-pointer-color);
 }
 
 .tooltip-top {
@@ -67,7 +81,7 @@
     margin-left: calc(0px - var(--tooltip-pointer-height-px) - var(--tooltip-border-px));
     border-width: calc(var(--tooltip-pointer-height-px) + var(--tooltip-border-px));
     border-style: solid;
-    border-color: var(--red) transparent transparent transparent;
+    border-color: var(--tooltip-pointer-color) transparent transparent transparent;
 }
 
 .tooltip-bottom {
@@ -84,5 +98,5 @@
     margin-left: calc(0px - var(--tooltip-pointer-height-px) - var(--tooltip-border-px));
     border-width: calc(var(--tooltip-pointer-height-px) + var(--tooltip-border-px));
     border-style: solid;
-    border-color: transparent transparent var(--red) transparent;
+    border-color: transparent transparent var(--tooltip-pointer-color) transparent;
 }

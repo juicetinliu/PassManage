@@ -166,12 +166,15 @@ class Component extends Element{ //reusable, functional, and created elements
 }
 
 class Tooltip extends Component {
-    constructor(app, page, id) {
+    constructor(app, page, id, tooltipText = "", type = "DEFAULT") {
         super("id", "tooltip-" + id, page, app);
-        this.TOOLTIP_CLASS = "tooltip";
+        this.TOOLTIP_CLASSES = "tooltip".split(" ");
+
         this.TEXT_WRAPPER_ID = this.label + "-text";
         this.textWrapper = new Element("id", this.TEXT_WRAPPER_ID);
-        this.sides = {
+        this.tooltipText = tooltipText;
+
+        this.TOOLTIP_SIDES = {
             LEFT: "tooltip-left",
             RIGHT: "tooltip-right",
             TOP: "tooltip-top",
@@ -179,13 +182,20 @@ class Tooltip extends Component {
         }
         this.attachedToComponent = null;
         this.TOOLTIP_SHOW_CLASS = "tooltip-show";
+
+        this.TOOLTIP_TYPES = {
+            DEFAULT: "tooltip-default",
+            ERROR: "tooltip-error",
+        }
+        if(Object.keys(this.TOOLTIP_TYPES).indexOf(type) < 0) throw new Error("Invalid tooltip type: " + type);
+        this.TOOLTIP_CLASSES.push(this.TOOLTIP_TYPES[type]);
     }
 
     create() {
-        let element = documentCreateElement("div", this.label, this.TOOLTIP_CLASS);
+        let element = documentCreateElement("div", this.label, this.TOOLTIP_CLASSES);
 
         let textWrapper = documentCreateElement("div", this.TEXT_WRAPPER_ID);
-        textWrapper.innerHTML = "No whitespace";
+        textWrapper.innerHTML = this.tooltipText;
 
         element.appendChild(textWrapper);
         return element;
@@ -202,13 +212,13 @@ class Tooltip extends Component {
         if(element.nodeName !== "DIV") throw new Error("Tooltip can only be attached to a div element");
         if(element.style.position && element.style.position !== "relative") throw new Error("Relative position not safe to apply to attaching component");
 
-        if(!this.sides[side]) throw new Error(side + " is not a valid Tooltip side");
+        if(!this.TOOLTIP_SIDES[side]) throw new Error(side + " is not a valid Tooltip side");
         
         this.attachedToComponent = component;
         element.style.position = "relative";
 
         let tooltip = this.create();
-        tooltip.classList.add(this.sides[side]);
+        tooltip.classList.add(this.TOOLTIP_SIDES[side]);
 
         element.appendChild(tooltip);
     }
@@ -310,18 +320,20 @@ class MaterialIcon extends Component {
 }
 
 class IconButton extends Button {
-    constructor(app, page, id, iconName) {
+    constructor(app, page, id, iconName, hoverText = null) {
         super(app, page, id);
         this.icon = new MaterialIcon(this.app, this.page, this.label, iconName);
         this.disabled = false;
         this.MAIN_BUTTON_CLASS = "butt-main";
         this.MAIN_BUTTON_DISABLED_CLASS = "butt-main-disabled";
+        this.hoverText = hoverText;
     }
 
     create() {
         let element = super.create();
         element.classList.add(this.MAIN_BUTTON_CLASS);
         if(this.disabled) element.classList.add(this.MAIN_BUTTON_DISABLED_CLASS); 
+        if(this.hoverText) element.title = this.hoverText;
 
         let icon = this.icon.create();
         element.appendChild(icon);
@@ -349,7 +361,7 @@ class IconButton extends Button {
 
 class EncryptedInformationToggleButton extends IconButton {
     constructor(app, page, label){
-        super(app, page, label + "-toggle-button", "visibility_off");
+        super(app, page, label + "-toggle-button", "visibility_off", "Toggle encryption");
         this.DECRYPTED_ICON_NAME = "visibility";
         this.ENCRYPTED_ICON_NAME = "visibility_off";
         this.visible = false;
@@ -495,7 +507,7 @@ class EncryptedInformation extends Component {
     }
 
     async decryptText(text) {
-        return await this.app.decryptPassEntryField(this.passEntryField, text, this.page, this);
+        return await this.app.decryptPassEntryField(this.passEntryField, text, this.page, this.toggleButton);
     }
 
     formatEncryptedText() {
@@ -523,8 +535,8 @@ class MainPassEntryRowMoreInfo extends Component {
         this.ITEM_HEADER_CLASS = "main-entry-more-info-content-item-header";
         this.ITEM_TEXT_CLASS = "main-entry-more-info-content-item-text";
 
-        this.editEntryButton = new IconButton(app, page, this.tag + "-edit-entry-button", "edit");
-        this.deleteEntryButton = new IconButton(app, page, this.tag + "-delete-entry-button", "delete");
+        this.editEntryButton = new IconButton(app, page, this.tag + "-edit-entry-button", "edit", "Edit");
+        this.deleteEntryButton = new IconButton(app, page, this.tag + "-delete-entry-button", "delete", "Delete");
         this.SHELF_BUTTON_CLASS = "entry-row-button";
         this.DELETE_BUTTON_CLASS = "delete-entry-button";
 
@@ -662,7 +674,7 @@ class MainPassEntryRow extends Component {
 
         this.SHOW_LESS_ICON_NAME = "expand_less";
         this.SHOW_MORE_ICON_NAME = "expand_more";
-        this.showMoreButton = new IconButton(app, page, this.tag + "-show-more-button", this.SHOW_MORE_ICON_NAME);
+        this.showMoreButton = new IconButton(app, page, this.tag + "-show-more-button", this.SHOW_MORE_ICON_NAME, "More information");
         this.SHOW_MORE_BUTTON_CLASS = "entry-row-button";
 
         this.moreInfo = new MainPassEntryRowMoreInfo(app, page, this.fullEntry);
@@ -787,7 +799,7 @@ class MainTable extends Component {
         this.NO_ENTRIES_ADD_ICON_NAME = "add";
         this.ENTRIES_ADD_ICON_NAME = "playlist_add";
         
-        this.addPassEntryButton = new IconButton(app, page, "add-new-pass-entry-button", this.NO_ENTRIES_ADD_ICON_NAME);
+        this.addPassEntryButton = new IconButton(app, page, "add-new-pass-entry-button", this.NO_ENTRIES_ADD_ICON_NAME, "Add new entry");
     }
 
     closeAllMoreInfos() {
@@ -978,9 +990,11 @@ class MainOptionsKeyIndicator extends Component {
                     this.app.CLEAR_CACHED_MASTER_KEY();
                 } else {
                     this.indicatorLoadingElement.show();
-                    await this.app.generateMasterKey(this.page);
+                    this.button.disable();
+                    await this.app.generateMasterKeyForIndicator(this.page, this.button);
                     this.showIndicatorTimerText(true);
                     this.indicatorLoadingElement.hide();
+                    this.button.enable();
                 }
             }
         }.bind(this));
@@ -1008,9 +1022,11 @@ class MainOptionsKeyIndicator extends Component {
                         this.app.REFRESH_CACHED_MASTER_KEY_TIMEOUT();
                     } else {
                         this.indicatorLoadingElement.show();
-                        await this.app.generateMasterKey(this.page);
+                        this.button.disable();
+                        await this.app.generateMasterKeyForIndicator(this.page, this.button);
                         this.showIndicatorTimerText(true);
                         this.indicatorLoadingElement.hide();
+                        this.button.enable();
                     }
                 }.bind(this), this.LONG_PRESS_DELAY_MS);
             }
@@ -1175,13 +1191,11 @@ class MainOptionsSearch extends Component {
 class MainOptionsDownload extends Component {
     constructor(app, page) {
         super("id", "main-page-option-download", page, app);
-        this.button = new IconButton(app, page, "main-page-option-download-button", "download");
-        this.HELPER_TEXT = "Download file";
+        this.button = new IconButton(app, page, "main-page-option-download-button", "download", "Download file");
     }
 
     create() {
         let element = documentCreateElement("div", this.label);
-        element.title = this.HELPER_TEXT;
         element.appendChild(this.button.create());
 
         return element;
@@ -1260,9 +1274,9 @@ class EditView extends Component {
         this.inputs.password.setInputType("password");
         this.inputValidations = this.setupInputValidations();
 
-        this.confirmButton = new IconButton(app, page, "edit-view-confirm-button", "check_circle");
+        this.confirmButton = new IconButton(app, page, "edit-view-confirm-button", "check_circle", "Confirm");
 
-        this.cancelButton = new IconButton(app, page, "edit-view-cancel-button", "cancel");
+        this.cancelButton = new IconButton(app, page, "edit-view-cancel-button", "cancel", "Cancel");
 
         this.EDIT_VIEW_ROW_ID_PREFIX = "edit-view-row-";
         this.EDIT_TEXT_WRAPPER_ID_PREFIX = "edit-text-wrapper-";
@@ -1390,9 +1404,8 @@ class EditView extends Component {
 
 
             validations.forEach((validation, id) => {
-                let tt = new Tooltip(this.app, this.page, "edit-error-" + field + "-" + id);
+                let tt = new Tooltip(this.app, this.page, "edit-error-" + field + "-" + id, validation.error, "ERROR");
                 tt.createAndAlignToComponent(fieldWrapper);
-                tt.setText(validation.error);
                 tt.setup();
                 tt.hide();
                 validation.tooltip = tt;
@@ -1487,15 +1500,19 @@ class DraggableMenu extends Component {
         this.HORIZONTAL = "h";
         this.VERTICAL = "v";
 
-        this.WRAPPER_CLASSES = (this.VERTICAL + " hv-c vh-c").split(" ");
+        this.WRAPPER_CLASSES = (this.HORIZONTAL + " hv-c vh-c").split(" ");
         this.WRAPPER_ID = "draggable-menu-wrapper";
+        this.wrapper = new Element("id", this.WRAPPER_ID);
 
-        this.homeButton = new IconButton(app, page, "draggable-menu-home-button", "home");
-        this.backButton = new IconButton(app, page, "draggable-menu-back-button", "undo");
+        this.homeButton = new IconButton(app, page, "draggable-menu-home-button", "home", "Home");
+        this.backButton = new IconButton(app, page, "draggable-menu-back-button", "undo", "Back");
 
         this.DARK_MODE_ICON = "dark_mode";
         this.LIGHT_MODE_ICON = "light_mode";
-        this.modeToggleButton = new IconButton(app, page, "draggable-menu-mode-toggle-button", this.LIGHT_MODE_ICON);
+        this.modeToggleButton = new IconButton(app, page, "draggable-menu-mode-toggle-button", this.LIGHT_MODE_ICON, "Toggle light/dark");
+
+        this.MENU_DRAGGABLE_HELP_TEXT = "Drag to sides to change orientation";
+        this.helperTooltip = new Tooltip(this.app, this.page, this.label, this.MENU_DRAGGABLE_HELP_TEXT);
     }
 
     create() {
@@ -1536,6 +1553,10 @@ class DraggableMenu extends Component {
         this.backButton.addEventListener(['click'], function() {
             this.app.shownPage.referringPage.show(false);
         }.bind(this));
+
+        this.helperTooltip.createAndAlignToComponent(this.wrapper, "TOP");
+        this.helperTooltip.setup();
+        this.helperTooltip.show();
     }
 
     dragElement() {
@@ -1564,18 +1585,22 @@ class DraggableMenu extends Component {
 
             let newTop = element.offsetTop - offsetY;
             let newLeft = element.offsetLeft - offsetX;
+
+            let main = that.app.main.getElement();
+            let mainBoundsHeight = main.scrollHeight;
+            let mainBoundsWidth = window.innerWidth;
             
-            let boundedTop = Math.min(Math.max(newTop, 0), window.innerHeight - element.offsetHeight);
-            let boundedLeft = Math.min(Math.max(newLeft, 0), window.innerWidth - element.offsetWidth);
+            let boundedTop = Math.min(Math.max(newTop, 0), mainBoundsHeight - element.offsetHeight);
+            let boundedLeft = Math.min(Math.max(newLeft, 0), mainBoundsWidth - element.offsetWidth);
 
             if(boundedTop === 0) {
                 that.changeOrientation(that.HORIZONTAL);
             } else if(boundedLeft === 0) {
                 that.changeOrientation(that.VERTICAL);
-            } else if(boundedTop === window.innerHeight - element.offsetHeight) {
-                if(element.offsetTop < window.innerHeight - element.offsetHeight) that.changeOrientation(that.HORIZONTAL);
-            } else if(boundedLeft === window.innerWidth - element.offsetWidth) {
-                if(element.offsetLeft < window.innerWidth - element.offsetWidth) that.changeOrientation(that.VERTICAL);
+            } else if(boundedTop === mainBoundsHeight - element.offsetHeight) {
+                if(element.offsetTop < mainBoundsHeight - element.offsetHeight) that.changeOrientation(that.HORIZONTAL);
+            } else if(boundedLeft === mainBoundsWidth - element.offsetWidth) {
+                if(element.offsetLeft < mainBoundsWidth - element.offsetWidth) that.changeOrientation(that.VERTICAL);
             }
 
             element.style.top = boundedTop + "px";
@@ -1590,11 +1615,12 @@ class DraggableMenu extends Component {
     }
 
     changeOrientation(orientation) {
-        let wrapper = new Element("id", this.WRAPPER_ID).getElement();
+        let wrapper = this.wrapper.getElement();
         if(orientation === this.HORIZONTAL) {
             wrapper.classList.add(this.HORIZONTAL);
             wrapper.classList.remove(this.VERTICAL);
         } else if(orientation === this.VERTICAL) {
+            this.helperTooltip.hide();
             wrapper.classList.remove(this.HORIZONTAL);
             wrapper.classList.add(this.VERTICAL);
         } else {
