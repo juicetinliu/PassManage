@@ -35,11 +35,16 @@ class App {
         this.CACHE_DURATION_S = this.passManager.CACHE_MASTER_KEY_DURATION_MS / 1000;
         this.passCacheTimer = new SimpleTimer(this.CACHE_DURATION_S);
 
-        this.colorModes = {
+        this.COLOR_MODE = {
             LIGHT: "light-mode",
             DARK: "dark-mode"
         }
-        this.currentColorMode = this.colorModes.LIGHT;
+
+        this.colorModeKey = "c";
+        let storedColorMode = this.retrieveColorMode();
+        console.log(storedColorMode)
+        this.currentColorMode = storedColorMode ? storedColorMode : this.COLOR_MODE.LIGHT;
+        this.setColorMode(this.currentColorMode);
     }
 
     run() {
@@ -84,15 +89,29 @@ class App {
     }
 
     toggleLightDarkMode() {
-        if(this.currentColorMode === this.colorModes.LIGHT) {
-            this.currentColorMode = this.colorModes.DARK;
-            document.body.classList.remove(this.colorModes.LIGHT);
-            document.body.classList.add(this.currentColorMode);
+        if(this.currentColorMode === this.COLOR_MODE.LIGHT) {
+            this.currentColorMode = this.COLOR_MODE.DARK;
         } else {
-            this.currentColorMode = this.colorModes.LIGHT;
-            document.body.classList.remove(this.colorModes.DARK);
-            document.body.classList.add(this.currentColorMode);
+            this.currentColorMode = this.COLOR_MODE.LIGHT;
         }
+        this.setColorMode(this.currentColorMode);
+        this.storeColorMode(this.currentColorMode);
+    }
+
+    setColorMode(colorMode) {
+        Object.values(this.COLOR_MODE).forEach(mode => {
+            document.body.classList.remove(mode);
+        })
+        document.body.classList.add(colorMode);
+        this.draggableMenu.setLightDarkModeButtonIcon();
+    }
+
+    retrieveColorMode() {
+        return localStorage.getItem(this.colorModeKey);
+    }
+
+    storeColorMode(colorMode) {
+        localStorage.setItem(this.colorModeKey, colorMode);
     }
 
     ___DEBUG_MAIN_PAGE() {

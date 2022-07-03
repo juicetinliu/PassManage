@@ -2,15 +2,15 @@
 //https://cryptojs.gitbook.io/docs/
 //https://www.youtube.com/watch?v=KQjf9get6PE
 const PassEntryConfig = {
-    tag:        {value: "tag",      title:"Tag",       isEncrypted: false, isArray: false, forTable: (e) => e.tag, }, 
-    website:    {value: "website",  title:"Website",   isEncrypted: false, isArray: false, forTable: (e) => e.website, }, 
-    username:   {value: "username", title:"Username",  isEncrypted: false, isArray: false, forTable: (e) => e.username ? e.username : e.email, }, 
-    email:      {value: "email",    title:"Email",     isEncrypted: false, isArray: false, forTable: null}, 
-    altEmail:   {value: "altEmail", title:"Email(other)",  isEncrypted: false, isArray: false, forTable: null}, 
-    password:   {value: "password", title:"Password",  isEncrypted: true,  isArray: false, forTable: (e) => e.password}, 
-    secrets:    {value: "secrets",  title:"Secrets",   isEncrypted: true,  isArray: true,  forTable: null}, 
-    hints:      {value: "hints",    title:"Hints",     isEncrypted: false, isArray: true,  forTable: null}, 
-    comments:   {value: "comments", title:"Comments",  isEncrypted: false, isArray: true,  forTable: null},
+    tag:        {value: "tag",      title:"Tag",          isEncrypted: false, isArray: false, addOptional: false, forTable: (e) => e.tag, }, 
+    website:    {value: "website",  title:"Website",      isEncrypted: false, isArray: false, addOptional: true , forTable: (e) => e.website, }, 
+    username:   {value: "username", title:"Username",     isEncrypted: false, isArray: false, addOptional: true , forTable: (e) => e.username ? e.username : e.email, }, 
+    email:      {value: "email",    title:"Email",        isEncrypted: false, isArray: false, addOptional: true , forTable: null}, 
+    altEmail:   {value: "altEmail", title:"Email(other)", isEncrypted: false, isArray: false, addOptional: true , forTable: null}, 
+    password:   {value: "password", title:"Password",     isEncrypted: true,  isArray: false, addOptional: true , forTable: (e) => e.password}, 
+    secrets:    {value: "secrets",  title:"Secrets",      isEncrypted: true,  isArray: true,  addOptional: true , forTable: null}, 
+    hints:      {value: "hints",    title:"Hints",        isEncrypted: false, isArray: true,  addOptional: true , forTable: null}, 
+    comments:   {value: "comments", title:"Comments",     isEncrypted: false, isArray: true,  addOptional: true , forTable: null},
     
     allFields: ["tag", "website", "username", "email", "altEmail", "password", "secrets", "hints", "comments"]
 }

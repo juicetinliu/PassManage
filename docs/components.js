@@ -1485,6 +1485,16 @@ class EditView extends Component {
             input.getElement().placeholder = "";
         });
         this.hideValidationTooltips();
+        if(this.action === this.actionTypes.ADD) this.setupOptionalInputPlaceholdersForAdd();
+    }
+
+    setupOptionalInputPlaceholdersForAdd() {
+        let passEntryConfig = this.config.EntryConfig;
+        passEntryConfig.allFields.forEach(field => {
+            if(passEntryConfig[field].addOptional) {
+                this.inputs[field].getElement().placeholder = "Optional";
+            }
+        });
     }
 
     setAction(action) {
@@ -1511,7 +1521,7 @@ class DraggableMenu extends Component {
         this.LIGHT_MODE_ICON = "light_mode";
         this.modeToggleButton = new IconButton(app, page, "draggable-menu-mode-toggle-button", this.LIGHT_MODE_ICON, "Toggle light/dark");
 
-        this.MENU_DRAGGABLE_HELP_TEXT = "Drag to sides to change orientation";
+        this.MENU_DRAGGABLE_HELP_TEXT = "Drag menu to sides to change orientation";
         this.helperTooltip = new Tooltip(this.app, this.page, this.label, this.MENU_DRAGGABLE_HELP_TEXT);
     }
 
@@ -1539,11 +1549,6 @@ class DraggableMenu extends Component {
 
         this.modeToggleButton.addEventListener(['click'], function() {
             this.app.toggleLightDarkMode();
-            if(this.app.currentColorMode === this.app.colorModes.LIGHT) {
-                this.modeToggleButton.setIcon(this.LIGHT_MODE_ICON);
-            } else {
-                this.modeToggleButton.setIcon(this.DARK_MODE_ICON);
-            }
         }.bind(this));
 
         this.homeButton.addEventListener(['click'], function() {
@@ -1557,6 +1562,14 @@ class DraggableMenu extends Component {
         this.helperTooltip.createAndAlignToComponent(this.wrapper, "TOP");
         this.helperTooltip.setup();
         this.helperTooltip.show();
+    }
+
+    setLightDarkModeButtonIcon() {
+        if(this.app.currentColorMode === this.app.COLOR_MODE.LIGHT) {
+            this.modeToggleButton.setIcon(this.LIGHT_MODE_ICON);
+        } else {
+            this.modeToggleButton.setIcon(this.DARK_MODE_ICON);
+        }
     }
 
     dragElement() {
@@ -1620,6 +1633,7 @@ class DraggableMenu extends Component {
             wrapper.classList.add(this.HORIZONTAL);
             wrapper.classList.remove(this.VERTICAL);
         } else if(orientation === this.VERTICAL) {
+            this.helperTooltip.setText("Awesome!");
             this.helperTooltip.hide();
             wrapper.classList.remove(this.HORIZONTAL);
             wrapper.classList.add(this.VERTICAL);
