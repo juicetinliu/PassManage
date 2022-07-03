@@ -1,0 +1,88 @@
+.tooltip {
+    --tooltip-border-px: 5px;
+    --tooltip-pointer-height-px: 5px;
+    background-color: var(--not-too-white);
+    color: var(--text-color);
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: var(--tooltip-border-px) solid var(--red);
+    position: absolute;
+    z-index: 10;
+    opacity: 0.0;
+    width: fit-content;
+    transition: opacity 0.5s, visibility 0.5s;
+    visibility: hidden;
+}
+
+.tooltip-show {
+    opacity: 1.0;
+    visibility: visible;
+}
+
+.tooltip-right {
+    top: 50%;
+    right: 0;
+    transform: translate(calc(100% + var(--tooltip-pointer-height-px)), -50%);
+}
+
+.tooltip-right::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    margin-top: calc(0px - var(--tooltip-pointer-height-px) - var(--tooltip-border-px));
+    border-width: calc(var(--tooltip-pointer-height-px) + var(--tooltip-border-px));
+    border-style: solid;
+    border-color: transparent var(--red) transparent transparent;
+}
+
+.tooltip-left {
+    top: 50%;
+    right: calc(100% + var(--tooltip-pointer-height-px));
+    transform: translateY(-50%);
+}
+
+.tooltip-left::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    margin-top: calc(0px - var(--tooltip-pointer-height-px) - var(--tooltip-border-px));
+    border-width: calc(var(--tooltip-pointer-height-px) + var(--tooltip-border-px));
+    border-style: solid;
+    border-color: transparent transparent transparent var(--red);
+}
+
+.tooltip-top {
+    bottom: calc(100% + var(--tooltip-pointer-height-px));
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.tooltip-top::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: calc(0px - var(--tooltip-pointer-height-px) - var(--tooltip-border-px));
+    border-width: calc(var(--tooltip-pointer-height-px) + var(--tooltip-border-px));
+    border-style: solid;
+    border-color: var(--red) transparent transparent transparent;
+}
+
+.tooltip-bottom {
+    top: calc(100% + var(--tooltip-pointer-height-px));
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.tooltip-bottom::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: calc(0px - var(--tooltip-pointer-height-px) - var(--tooltip-border-px));
+    border-width: calc(var(--tooltip-pointer-height-px) + var(--tooltip-border-px));
+    border-style: solid;
+    border-color: transparent transparent var(--red) transparent;
+}

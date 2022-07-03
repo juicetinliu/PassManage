@@ -165,6 +165,77 @@ class Component extends Element{ //reusable, functional, and created elements
     } //any event listeners
 }
 
+class Tooltip extends Component {
+    constructor(app, page, id) {
+        super("id", "tooltip-" + id, page, app);
+        this.TOOLTIP_CLASS = "tooltip";
+        this.TEXT_WRAPPER_ID = this.label + "-text";
+        this.textWrapper = new Element("id", this.TEXT_WRAPPER_ID);
+        this.sides = {
+            LEFT: "tooltip-left",
+            RIGHT: "tooltip-right",
+            TOP: "tooltip-top",
+            BOTTOM: "tooltip-bottom"
+        }
+        this.attachedToComponent = null;
+        this.TOOLTIP_SHOW_CLASS = "tooltip-show";
+    }
+
+    create() {
+        let element = documentCreateElement("div", this.label, this.TOOLTIP_CLASS);
+
+        let textWrapper = documentCreateElement("div", this.TEXT_WRAPPER_ID);
+        textWrapper.innerHTML = "No whitespace";
+
+        element.appendChild(textWrapper);
+        return element;
+    }
+
+    setup() {
+        this.addEventListener(["click"], function() {
+            this.hide();
+        }.bind(this));
+    }
+
+    createAndAlignToComponent(component, side = "BOTTOM") {
+        let element = component.getElement();
+        if(element.nodeName !== "DIV") throw new Error("Tooltip can only be attached to a div element");
+        if(element.style.position && element.style.position !== "relative") throw new Error("Relative position not safe to apply to attaching component");
+
+        if(!this.sides[side]) throw new Error(side + " is not a valid Tooltip side");
+        
+        this.attachedToComponent = component;
+        element.style.position = "relative";
+
+        let tooltip = this.create();
+        tooltip.classList.add(this.sides[side]);
+
+        element.appendChild(tooltip);
+    }
+
+    setText(text) {
+        this.textWrapper.getElement().innerHTML = text;
+    }
+
+    show() {
+        let elementExists = this.exists();
+        if(elementExists) {
+            elementExists.classList.add(this.TOOLTIP_SHOW_CLASS);
+        } else {
+            this.throwNotFoundError();
+        }
+    }
+
+    hide() {
+        let elementExists = this.exists();
+        if(elementExists) {
+            elementExists.classList.remove(this.TOOLTIP_SHOW_CLASS);
+        } else {
+            this.throwNotFoundError();
+        }
+    }
+}
+
 class Divider extends Component {
     constructor(app, page, otherClasses = null) {
         super("class", "divider", page, app);
@@ -538,10 +609,17 @@ class MainPassEntryRowMoreInfo extends Component {
 
     close() {
         this.getElement().classList.remove(this.MORE_INFO_OPENED_CLASS);
+        this.editEntryButton.disable();
+        this.deleteEntryButton.disable();
+        if(this.hasSecrets) this.secretsEncryptedInformation.toggleButton.disable();
     }
 
     open() {
-        this.getElement().classList.add(this.MORE_INFO_OPENED_CLASS);    }
+        this.getElement().classList.add(this.MORE_INFO_OPENED_CLASS);   
+        this.editEntryButton.enable();
+        this.deleteEntryButton.enable(); 
+        if(this.hasSecrets) this.secretsEncryptedInformation.toggleButton.enable();    
+    }
 
     setup() {
         if(this.hasSecrets) this.secretsEncryptedInformation.setup();
@@ -1050,6 +1128,10 @@ class MainOptionsSearch extends Component {
     setup() {
         this.input.addEventListener(["focus"], function() {
             this._toggleSearchFocus(true);
+            let searchText = this.getSearchValue();
+            if(searchText) {
+                this.app.searchPassManagerEntries(searchText);
+            }
         }.bind(this));
 
         this.input.addEventListener(["focusout"], function() {
@@ -1121,8 +1203,8 @@ class MainOptionsDownload extends Component {
 }
 
 class EditTextInput extends Component {
-    constructor(app, page, tag) {
-        super("id", "edit-text-input-" + tag, page, app);
+    constructor(app, page, field) {
+        super("id", "edit-text-input-" + field, page, app);
 
         this.TEXT_INPUT_CLASS = "text-input";
         this.inputType = "text";
@@ -1143,8 +1225,8 @@ class EditTextInput extends Component {
 
 
 class EditTextArea extends Component {
-    constructor(app, page, tag) {
-        super("id", "edit-text-area-" + tag, page, app);
+    constructor(app, page, field) {
+        super("id", "edit-text-area-" + field, page, app);
 
         this.TEXT_AREA_CLASS = "text-area";
     }
@@ -1176,12 +1258,14 @@ class EditView extends Component {
             }
         })
         this.inputs.password.setInputType("password");
+        this.inputValidations = this.setupInputValidations();
 
         this.confirmButton = new IconButton(app, page, "edit-view-confirm-button", "check_circle");
 
         this.cancelButton = new IconButton(app, page, "edit-view-cancel-button", "cancel");
 
         this.EDIT_VIEW_ROW_ID_PREFIX = "edit-view-row-";
+        this.EDIT_TEXT_WRAPPER_ID_PREFIX = "edit-text-wrapper-";
         this.EDIT_VIEW_CLASSES = "v hv-l vh-c".split(" ");
         this.EDIT_VIEW_ROW_CLASSES = "h hv-c vh-c edit-view-row".split(" ");
         this.EDIT_VIEW_ROW_HEADER_CLASS = "h hv-r vh-c edit-view-row-header".split(" ");
@@ -1200,20 +1284,23 @@ class EditView extends Component {
         let entryConfig = this.config.EntryConfig;
 
         Object.entries(this.inputs).forEach(entry => {
-            let header = entry[0];
+            let field = entry[0];
             let input = entry[1];
 
-            let row = documentCreateElement("div", this.EDIT_VIEW_ROW_ID_PREFIX + header, this.EDIT_VIEW_ROW_CLASSES);
+            let row = documentCreateElement("div", this.EDIT_VIEW_ROW_ID_PREFIX + field, this.EDIT_VIEW_ROW_CLASSES);
 
             let rowHeader = documentCreateElement("div", null, this.EDIT_VIEW_ROW_HEADER_CLASS);
 
-            rowHeader.innerHTML = entryConfig[header].title + ":";
+            rowHeader.innerHTML = entryConfig[field].title + ":";
 
             let inputElement = input.create();
             inputElement.classList.add(this.EDIT_VIEW_ROW_INPUT_CLASS);
             
+            let inputElementWrapper = documentCreateElement("div", this.EDIT_TEXT_WRAPPER_ID_PREFIX + field);
+            inputElementWrapper.appendChild(inputElement);
+
             row.appendChild(rowHeader);
-            row.appendChild(inputElement);
+            row.appendChild(inputElementWrapper);
 
             element.appendChild(row);
         })
@@ -1236,9 +1323,13 @@ class EditView extends Component {
 
         this.confirmButton.addEventListener(["click"], function() {
             let entry = this.convertInputValuesToEditPageEntry();
-            this.validateValues(entry);
+            if(this.validateValues(entry)) return;
             this.app.confirmEditPageEntry(entry, this.page);
         }.bind(this));
+        
+        this.setupInputValidations();     
+        this.attachInputValidationErrorTooltips();
+        this.setupInputCloseTooltipListeners();
     }
 
     convertInputValuesToEditPageEntry() {
@@ -1256,37 +1347,108 @@ class EditView extends Component {
         return out;
     }
 
+    setupInputValidations() {
+        return {
+            tag: [
+                {
+                    rule: (tag) => {return !tag || tag.match(/^ *$/);}, 
+                    tooltip: null, 
+                    error: "Entry must have a tag"
+                },
+                {
+                    rule: (tag) => {return tag.includes(" ");}, 
+                    tooltip: null, 
+                    error: "Tag must not contain spaces"
+                },
+                {
+                    rule: (tag) => {return this.action === this.actionTypes.ADD && this.app.passManager.entryAlreadyExistsWithTag(tag);}, 
+                    tooltip: null, 
+                    error: "Entry cannot have same tag as existing entries"
+                },
+                {
+                    rule: (tag) => {return this.action === this.actionTypes.EDIT && this.app.passManager.entryAlreadyExistsWithTag(tag, this.page.editEntry.tag);},
+                    tooltip: null, 
+                    error: "Entry cannot have same tag as existing entries"
+                }
+            ],
+            website: [
+                {
+                    rule: (website) => {return website && !website.match(this.app.WEBSITE_REGEXP);},
+                    tooltip: null, 
+                    error: "Website is invalid"
+                }
+            ]
+        }
+    }
+
+    attachInputValidationErrorTooltips() {
+        Object.entries(this.inputValidations).forEach(fieldValidation => {
+            let field = fieldValidation[0];
+            let validations = fieldValidation[1];
+
+            let fieldWrapper = new Element("id", this.EDIT_TEXT_WRAPPER_ID_PREFIX + field);
+
+
+            validations.forEach((validation, id) => {
+                let tt = new Tooltip(this.app, this.page, "edit-error-" + field + "-" + id);
+                tt.createAndAlignToComponent(fieldWrapper);
+                tt.setText(validation.error);
+                tt.setup();
+                tt.hide();
+                validation.tooltip = tt;
+            })
+        })
+    }
+
+    setupInputCloseTooltipListeners() {
+        Object.entries(this.inputValidations).forEach(fieldValidation => {
+            let field = fieldValidation[0];
+            let validations = fieldValidation[1];
+
+            this.inputs[field].addEventListener(['click', 'focusin'], function() {
+                validations.forEach(validation => {
+                    validation.tooltip.hide();
+                });
+            })
+        })
+    }
+
+    hideValidationTooltips() {
+        Object.entries(this.inputValidations).forEach(fieldValidation => {
+            let validations = fieldValidation[1];
+            validations.forEach(validation => {
+                    validation.tooltip.hide();
+            })
+        })
+    }
+
     validateValues(entry) {
-        let entryTag = entry.tag;
-        if(!entryTag || entryTag.match(/^ *$/)) {
-            throw new Error("Entry must have a tag");
-        }
-        if(entryTag.includes(" ")) {
-            throw new Error("Tag must not contain whitespace");
-        }
-        if(this.action === this.actionTypes.ADD) {
-            if(this.app.passManager.entryAlreadyExistsWithTag(entryTag)) {
-                throw new Error("ADD: Entry cannot have same tag as existing entries");
-            }
-        } else if(this.action === this.actionTypes.EDIT) {
-            if(this.app.passManager.entryAlreadyExistsWithTag(entryTag, this.page.editEntry.tag)) {
-                throw new Error("EDIT: Entry cannot have same tag as existing entries");
-            }
-        }
-        if(entry.website) {
-            if(!entry.website.match(this.app.WEBSITE_REGEXP)) {
-                console.log(entry.website);
-                throw new Error("Website must have a valid website");
-            }
-        }
+        let invalidInputOccurred = false; //We just want to show one invalid message
+        Object.entries(this.inputValidations).forEach(fieldValidation => {
+            let field = fieldValidation[0];
+            let validations = fieldValidation[1];
+            let inputRow = new Element("id", this.EDIT_VIEW_ROW_ID_PREFIX + field)
+
+            validations.forEach(validation => {
+                if(!invalidInputOccurred && validation.rule(entry[field])) {
+                    invalidInputOccurred = true;
+                    let topPos = inputRow.getElement().offsetTop;
+                    this.getElement().scrollTop = topPos - this.getElement().offsetTop;
+                    validation.tooltip.show();
+                } else {
+                    validation.tooltip.hide();
+                }
+            })
+        })
+        return invalidInputOccurred;
     }
 
     populateInputs(entry) {
         let passEntryConfig = this.config.EntryConfig;
 
-        Object.entries(entry).forEach(entryField => {
-            let header = entryField[0];
-            let content = entryField[1];
+        Object.entries(entry).forEach(headerContent => {
+            let header = headerContent[0];
+            let content = headerContent[1];
             if(passEntryConfig[header].isEncrypted) {
                 content = null;
                 if(header === this.PASSWORD_HEADER) {
@@ -1309,9 +1471,134 @@ class EditView extends Component {
             input.getElement().style = null;
             input.getElement().placeholder = "";
         });
+        this.hideValidationTooltips();
     }
 
     setAction(action) {
         this.action = action;
+    }
+}
+
+class DraggableMenu extends Component {
+    constructor(app, page) {
+        super("id", "draggable-menu", page, app);
+        this.CLASSES = "p-round".split(" ");
+
+        this.HORIZONTAL = "h";
+        this.VERTICAL = "v";
+
+        this.WRAPPER_CLASSES = (this.VERTICAL + " hv-c vh-c").split(" ");
+        this.WRAPPER_ID = "draggable-menu-wrapper";
+
+        this.homeButton = new IconButton(app, page, "draggable-menu-home-button", "home");
+        this.backButton = new IconButton(app, page, "draggable-menu-back-button", "undo");
+
+        this.DARK_MODE_ICON = "dark_mode";
+        this.LIGHT_MODE_ICON = "light_mode";
+        this.modeToggleButton = new IconButton(app, page, "draggable-menu-mode-toggle-button", this.LIGHT_MODE_ICON);
+    }
+
+    create() {
+        let element = documentCreateElement("div", this.label, this.CLASSES);
+        
+        let wrapper = documentCreateElement("div", this.WRAPPER_ID, this.WRAPPER_CLASSES);
+        
+        let homeButton = this.homeButton.create();
+        wrapper.appendChild(homeButton);
+
+        let backButton = this.backButton.create();
+        wrapper.appendChild(backButton);
+
+        let modeToggleButton = this.modeToggleButton.create();
+        wrapper.appendChild(modeToggleButton);
+        
+        element.appendChild(wrapper);
+        return element;
+    }
+
+    setup() {
+        this.dragElement();
+        this.homeButton.disable();
+
+        this.modeToggleButton.addEventListener(['click'], function() {
+            this.app.toggleLightDarkMode();
+            if(this.app.currentColorMode === this.app.colorModes.LIGHT) {
+                this.modeToggleButton.setIcon(this.LIGHT_MODE_ICON);
+            } else {
+                this.modeToggleButton.setIcon(this.DARK_MODE_ICON);
+            }
+        }.bind(this));
+
+        this.homeButton.addEventListener(['click'], function() {
+            this.app.goToIntroPage(this.app.shownPage);
+        }.bind(this));
+
+        this.backButton.addEventListener(['click'], function() {
+            this.app.shownPage.referringPage.show(false);
+        }.bind(this));
+    }
+
+    dragElement() {
+        let element = this.getElement();
+        let that = this;
+        let lastMouseX = 0, lastMouseY = 0;
+        element.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+
+            let offsetX = lastMouseX - e.clientX;
+            let offsetY = lastMouseY - e.clientY;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+
+            let newTop = element.offsetTop - offsetY;
+            let newLeft = element.offsetLeft - offsetX;
+            
+            let boundedTop = Math.min(Math.max(newTop, 0), window.innerHeight - element.offsetHeight);
+            let boundedLeft = Math.min(Math.max(newLeft, 0), window.innerWidth - element.offsetWidth);
+
+            if(boundedTop === 0) {
+                that.changeOrientation(that.HORIZONTAL);
+            } else if(boundedLeft === 0) {
+                that.changeOrientation(that.VERTICAL);
+            } else if(boundedTop === window.innerHeight - element.offsetHeight) {
+                if(element.offsetTop < window.innerHeight - element.offsetHeight) that.changeOrientation(that.HORIZONTAL);
+            } else if(boundedLeft === window.innerWidth - element.offsetWidth) {
+                if(element.offsetLeft < window.innerWidth - element.offsetWidth) that.changeOrientation(that.VERTICAL);
+            }
+
+            element.style.top = boundedTop + "px";
+            element.style.left = boundedLeft + "px";
+            element.width
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
+    changeOrientation(orientation) {
+        let wrapper = new Element("id", this.WRAPPER_ID).getElement();
+        if(orientation === this.HORIZONTAL) {
+            wrapper.classList.add(this.HORIZONTAL);
+            wrapper.classList.remove(this.VERTICAL);
+        } else if(orientation === this.VERTICAL) {
+            wrapper.classList.remove(this.HORIZONTAL);
+            wrapper.classList.add(this.VERTICAL);
+        } else {
+            throw new Error("Invalid orientation provided")
+        }
     }
 }

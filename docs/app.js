@@ -8,6 +8,8 @@ class App {
         this.mainPanel = new Element("id", "main-panel");
         this.mainLoading = new Element("id", "main-panel-loading");
 
+        this.draggableMenu = new DraggableMenu(this, null);
+
         this.pages = {
             DropPage: new DropPage(this), 
             LoginPage: new LoginPage(this), 
@@ -15,6 +17,8 @@ class App {
             EditPage: new EditPage(this),
             IntroPage: new IntroPage(this)
         };
+
+        this.shownPage = null;
 
         Object.values(this.pages).forEach(p => p.setAppPages(this.pages));
 
@@ -30,6 +34,12 @@ class App {
 
         this.CACHE_DURATION_S = this.passManager.CACHE_MASTER_KEY_DURATION_MS / 1000;
         this.passCacheTimer = new SimpleTimer(this.CACHE_DURATION_S);
+
+        this.colorModes = {
+            LIGHT: "light-mode",
+            DARK: "dark-mode"
+        }
+        this.currentColorMode = this.colorModes.LIGHT;
     }
 
     run() {
@@ -39,6 +49,7 @@ class App {
     }
 
     setup(){
+        this.setupDraggableMenu();
         Object.values(this.pages).forEach(p => p.setup());
         this.mainLoading.hide();
 
@@ -50,6 +61,40 @@ class App {
         // this.___DEBUG_MAIN_PAGE();
     }
 
+    setupDraggableMenu() {
+        let draggableMenu = this.draggableMenu.create();
+        this.main.getElement().appendChild(draggableMenu);
+        this.draggableMenu.setup();
+    }
+
+    disableDraggbleMenuBackButton() {
+        this.draggableMenu.backButton.disable();
+    }
+
+    enableDraggbleMenuBackButton() {
+        this.draggableMenu.backButton.enable();
+    }
+
+    disableDraggbleMenuHomeButton() {
+        this.draggableMenu.homeButton.disable();
+    }
+
+    enableDraggbleMenuHomeButton() {
+        this.draggableMenu.homeButton.enable();
+    }
+
+    toggleLightDarkMode() {
+        if(this.currentColorMode === this.colorModes.LIGHT) {
+            this.currentColorMode = this.colorModes.DARK;
+            document.body.classList.remove(this.colorModes.LIGHT);
+            document.body.classList.add(this.currentColorMode);
+        } else {
+            this.currentColorMode = this.colorModes.LIGHT;
+            document.body.classList.remove(this.colorModes.DARK);
+            document.body.classList.add(this.currentColorMode);
+        }
+    }
+
     ___DEBUG_MAIN_PAGE() {
         // FOR DEBUGGING
         let testEntryStrings = ['Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]', ];
@@ -57,6 +102,10 @@ class App {
         this.passManager.setEntries(e);
 
         this.goToMainPage(null);
+    }
+
+    RESET_PASS_MANAGER() {
+        this.passManager.RESET();
     }
 
     getPassManagerEntries() {
@@ -71,20 +120,19 @@ class App {
     hideAllPages() {
         Object.values(this.pages).forEach(p => p.hide());
         this.mainLoading.hide();
-        // this.mainPanel.getElement().style.maxWidth = "100px";
     }
 
-    savePasswordToPassManager(pw, referringPage, callBack) {
+    async savePasswordToPassManager(pw, referringPage, callBack) {
         this.keyCreated = true;
         this.hideAllPages();
         this.mainLoading.show();
-
+        
         this.passManager.saveMasterPasswordToHash(pw);
 
         if(callBack) { //callback after saving password 
-            callBack(referringPage);
+            await callBack(referringPage);
         } else {
-            this.goToMainPage(referringPage);
+            this.goToMainPage(null);
         }
     }
 
@@ -109,7 +157,7 @@ class App {
                     console.log("Something went wrong with decrypting passFile")
                     console.log(e);
                     this.rawPassFile = null;
-                    this.goToDropPage(referringPage); //go back to drop page;
+                    this.pages.DropPage.show(); //go back to drop page without setting referring page
                     return;
                 }
             }
@@ -124,10 +172,10 @@ class App {
                 console.log("Something went wrong with parsing passFile");
                 console.log(e);
                 this.rawPassFile = null;
-                this.goToDropPage(referringPage); //go back to drop page;
+                this.pages.DropPage.show(); //go back to drop page without setting referring page
                 return;
             }
-
+            this.CLEAR_CACHED_MASTER_KEY();
             this.goToLoginPage(referringPage);
         }.bind(this);
     }
@@ -144,7 +192,7 @@ class App {
     downloadPassFile() {
         let downloadPassFile = this.passManager.getPassFileFromEntries(true);
 
-        let a = document.createElement('a');
+        let a = documentCreateElement('a');
         let file = new Blob([downloadPassFile.getRaw()], {type: 'text/plain'});
             
         a.href = URL.createObjectURL(file);
@@ -157,6 +205,7 @@ class App {
     async addPassEntry(input, referringPage) {
         this.hideAllPages();
         this.mainLoading.show();
+        this.disableDraggbleMenuBackButton();
 
         // https://stackoverflow.com/questions/14367168/css-animations-stall-when-running-javascript-function
         try {
@@ -173,12 +222,13 @@ class App {
             }
             throw e;
         }
-        this.goToMainPage(referringPage);
+        this.goToMainPage(null);
     }
 
     async editPassEntry(entryTag, input, referringPage) {
         this.hideAllPages();
         this.mainLoading.show();
+        this.disableDraggbleMenuBackButton();
 
         try {
             await this.passManager.editPassEntry(entryTag, input); //wait for web worker completion
@@ -194,8 +244,9 @@ class App {
             }
             throw e;
         }
+
         this.pages.EditPage.completeEditEntry();
-        this.goToMainPage(referringPage);
+        this.goToMainPage(null);
     }
 
     confirmEditPageEntry(entry, referringPage) {
@@ -205,11 +256,13 @@ class App {
 
     deleteEntry(entry, referringPage) {
         this.passManager.deletePassEntry(entry);
-        this.goToMainPage(referringPage);
+        this.goToMainPage(null);
     }
 
     async decryptPassEntryField(field, content, referringPage, component) {
         let decryptedField;
+        this.disableDraggbleMenuBackButton();
+
         try {
             decryptedField = await this.passManager.decryptPassEntryField(field, content); //wait for web worker completion
         } catch (e) {
@@ -217,7 +270,7 @@ class App {
                 if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
                     let callBackAfterLogin = (refPage) => {
                         component.toggleButton.getElement().click();
-                        this.goToMainPage(refPage, false);
+                        this.goToMainPage(null, false);
                     };
                     this.goToLoginPage(referringPage, callBackAfterLogin);
                     throw new AppError("Redirecting to login before decrypting", AppErrorType.MISSING_MASTER_PASSWORD);
@@ -241,6 +294,8 @@ class App {
     }
 
     async generateMasterKey(referringPage) {
+        this.disableDraggbleMenuBackButton();
+
         try {
             await this.passManager.generateMasterKey();
         } catch (e) {
@@ -248,13 +303,18 @@ class App {
                 if(e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
                     let callBackAfterLogin = async (refPage) => {
                         await this.generateMasterKey(refPage);
-                        this.goToMainPage(refPage, false);
+                        this.goToMainPage(null, false);
                     };
                     this.goToLoginPage(referringPage, callBackAfterLogin);
                     return;
                 }
             }
         }
+    }
+
+    goToIntroPage(referringPage) {
+        this.pages.IntroPage.setReferringPage(referringPage);
+        this.pages.IntroPage.show();
     }
 
     goToEditPage(action, referringPage, editEntry = null) { //go to edit page with a set action (edit or add)

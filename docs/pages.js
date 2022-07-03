@@ -18,6 +18,13 @@ class Page {
         if(!this.created) this.create();
         this.app.hideAllPages();
         this.pageElement.show();
+        this.app.shownPage = this;
+
+        if(!this.app.shownPage.referringPage) {
+            this.app.disableDraggbleMenuBackButton();
+        } else {
+            this.app.enableDraggbleMenuBackButton();
+        }
     }
 
     hide() {
@@ -50,12 +57,15 @@ class IntroPage extends Page {
     setup() {
         this.startNewButton.addEventListener(["click"], function() {
             this.app.keyCreated = false;
-            this.app.goToMainPage(this, false);
+            this.app.RESET_PASS_MANAGER();
+            this.app.goToMainPage(this);
+            this.app.enableDraggbleMenuHomeButton();
         }.bind(this));
 
         this.fromFileButton.addEventListener(["click"], function() {
             this.app.keyCreated = true;
             this.app.goToDropPage(this);
+            this.app.enableDraggbleMenuHomeButton();
         }.bind(this));
 
         this.startNewButton.addEventListener(["keydown"], function(event) {
@@ -282,11 +292,7 @@ class LoginPage extends Page {
         super.setup();
         this.inputPassword.getElement().placeholder = this.PASSWORD_INPUT_PLACEHOLDER;
         this.inputPassword.addEventListener(["input"], function() {
-            if(this.inputPassword.getElement().value) {
-                this.submitUserPasswordButton.enable();
-            }else{
-                this.submitUserPasswordButton.disable();
-            }
+            this.toggleSubmitButton();
         }.bind(this));
         
         this.submitUserPasswordButton.addEventListener(["click"], function() {
@@ -348,6 +354,15 @@ class LoginPage extends Page {
         } else { //Otherwise callBack must be from a referring page – we allow a cancel to bring user back to referring page 
             this.loginSkipContentButton.getElement().innerHTML = this.LOGIN_CANCEL_TEXT;
             this.loginSkipContent.show();
+        }
+        this.toggleSubmitButton();
+    }
+
+    toggleSubmitButton() {
+        if(this.inputPassword.getElement().value) {
+            this.submitUserPasswordButton.enable();
+        }else{
+            this.submitUserPasswordButton.disable();
         }
     }
 
@@ -429,7 +444,7 @@ class DropPage extends Page {
         }.bind(this));
     }
 
-    show(fileDrop = true) {
+    show(update, fileDrop = true) {
         super.show();
 
         this._setPassFileTitle();
@@ -496,7 +511,7 @@ class DropPage extends Page {
     }
 
     _confirmRawPassFile() {
-        this.show(false);
+        this.show(true, false);
 
         let rawPassFile = this.app.getRawPassFile();
 

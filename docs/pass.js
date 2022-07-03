@@ -132,6 +132,13 @@ class PassManager {
         this._generateSecrets(); //will be overwritten if passFile is uploaded
     }
 
+    RESET() {
+        this.deleteMasterPasswordHashAndKey();
+        this.setEntries([]);
+        this.DESTROY_CACHED_MASTER_KEY();
+        this._generateSecrets();
+    }
+
     CACHE_MASTER_KEY(mk) {
         this.CACHED_MASTER_KEY = mk;
         this.DESTROY_CACHED_MASTER_KEY(true);
@@ -200,6 +207,8 @@ class PassManager {
         
         if(retries > this.cryptoWorker.MAX_REQUEST_RETRY) throw new AppError("Maximum number of retry requests reached; try again later", AppErrorType.GENERATING_MASTER_KEY);
         
+        this.app.disableDraggbleMenuHomeButton();
+        
         let jobID = this.cryptoWorker.request(CryptoWorkerFunctions.PBKDF2, {
             masterPasswordHash: this.masterPasswordHash,
             deviceSecretHash: this.deviceSecretHash,
@@ -214,10 +223,12 @@ class PassManager {
                     setTimeout(async () => {
                         let retrymk = await this.generateMasterKey(retries + 1);
                         this.CACHE_MASTER_KEY(retrymk);
+                        this.app.enableDraggbleMenuHomeButton();
                         resolve(retrymk);
                     }, this.cryptoWorker.REQUEST_RETRY_DELAY_MS);
                 } else {
                     this.CACHE_MASTER_KEY(mk);
+                    this.app.enableDraggbleMenuHomeButton();
                     resolve(mk);
                 }
             }
@@ -428,23 +439,51 @@ class PassManager {
 }
 
 class PassSearchRanker {
-    constructor() {}
+    constructor() {
+        this.fieldWeights = {
+            tag: 10,
+            website: 5,
+            username: 1,
+            email: 1,
+        }
+    }
 
     searchEntries(entries, searchText) {
-        //NAIVE SEARCH – better to search through phrases with words and weight different fields
         let copyEntries = [...entries];
+        searchText = searchText.toUpperCase();
+
+        let scores = {}; //larger value is better
+
+        copyEntries.forEach(e => {
+            let totalScore = 0;
+            Object.entries(this.fieldWeights).forEach(fieldWeight => {
+                let field = fieldWeight[0];
+                let weight = fieldWeight[1];
+                if(e[field]) {
+                    let entryFieldText = e[field].toUpperCase();
+                    totalScore += weight * this.getFieldSearchScore(searchText, entryFieldText);
+                }
+            })
+            scores[e.tag] = totalScore;
+        })
+
         copyEntries.sort(function(a, b) {
-            let distA = this._levenshteinDistance(searchText, a.tag);
-            let distB = this._levenshteinDistance(searchText, b.tag);
-            return distA - distB;
+            return scores[b.tag] - scores[a.tag]; //larger value is better
         }.bind(this));
 
         let returnEntries = copyEntries.splice(0, 5);
         return returnEntries;
     }
 
+    getFieldSearchScore(s, t) {
+        let score = 2 * this._largestSubstringOfSearchTextPrefixed(s, t);
+        score += this._largestSubstringOfSearchTextUnbroken(s, t);
+        score -= this._levenshteinDistance(s, t);
+        return score;
+    }
+
     // https://www.30secondsofcode.org/js/s/levenshtein-distance
-    _levenshteinDistance(s, t) {
+    _levenshteinDistance(s, t) { //smaller value is better
         if (!s.length) return t.length;
         if (!t.length) return s.length;
         let arr = [];
@@ -460,6 +499,26 @@ class PassSearchRanker {
         }
         return arr[t.length][s.length];
     };
+
+    _largestSubstringOfSearchTextPrefixed(s, t) { //larger value is better
+        for(let l = s.length; l >= 0; l--) {
+            let substr = s.substring(0, l);
+            if(t.startsWith(substr)) {
+                return l;
+            }
+        }
+        return 0;
+    }
+
+    _largestSubstringOfSearchTextUnbroken(s, t) { //larger value is better
+        for(let l = s.length; l >= 0; l--) {
+            let substr = s.substring(0, l);
+            if(t.includes(substr)) {
+                return l;
+            }
+        }
+        return 0;
+    }
 }
 
 class PassHandler {
