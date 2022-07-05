@@ -13,8 +13,8 @@
     --not-too-white: #393939;
     --background-white: #292929;
     --text-color: #fafafa;
-    --light-shadow: rgba(6, 6, 6, 0.635);
-    --dark-shadow: rgba(70, 70, 70, 0.34);
+    --light-shadow: rgba(70, 70, 70, 0.34);
+    --dark-shadow: rgba(6, 6, 6, 0.635);
     --red: #a72f2f;
     --highlight-red: #ea5656;
     --green: #2fa745;
@@ -211,8 +211,8 @@ body {
 }
 
 .dark-mode #draggable-menu {
-    box-shadow: -10px -10px 15px var(--light-shadow);
-    border: 0.5px inset var(--glass-border);
+    box-shadow: 10px 10px 15px var(--dark-shadow);
+    border: 0.5px outset var(--glass-border);
 }
 
 .light-mode #draggable-menu {

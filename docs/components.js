@@ -1510,7 +1510,9 @@ class DraggableMenu extends Component {
         this.HORIZONTAL = "h";
         this.VERTICAL = "v";
 
-        this.WRAPPER_CLASSES = (this.HORIZONTAL + " hv-c vh-c").split(" ");
+        this.orientation = this.HORIZONTAL;
+
+        this.WRAPPER_CLASSES = (this.orientation + " hv-c vh-c").split(" ");
         this.WRAPPER_ID = "draggable-menu-wrapper";
         this.wrapper = new Element("id", this.WRAPPER_ID);
 
@@ -1606,15 +1608,21 @@ class DraggableMenu extends Component {
             let boundedTop = Math.min(Math.max(newTop, 0), mainBoundsHeight - element.offsetHeight);
             let boundedLeft = Math.min(Math.max(newLeft, 0), mainBoundsWidth - element.offsetWidth);
 
+            let orientation = null;
             if(boundedTop === 0) {
-                that.changeOrientation(that.HORIZONTAL);
+                orientation = that.HORIZONTAL;
             } else if(boundedLeft === 0) {
-                that.changeOrientation(that.VERTICAL);
+                orientation = that.VERTICAL;
             } else if(boundedTop === mainBoundsHeight - element.offsetHeight) {
-                if(element.offsetTop < mainBoundsHeight - element.offsetHeight) that.changeOrientation(that.HORIZONTAL);
+                if(element.offsetTop < mainBoundsHeight - element.offsetHeight) orientation = that.HORIZONTAL;
             } else if(boundedLeft === mainBoundsWidth - element.offsetWidth) {
-                if(element.offsetLeft < mainBoundsWidth - element.offsetWidth) that.changeOrientation(that.VERTICAL);
+                if(element.offsetLeft < mainBoundsWidth - element.offsetWidth) orientation = that.VERTICAL;
             }
+            that.orientation = orientation;
+            if(orientation) that.changeOrientation(that.orientation);
+
+            boundedTop = Math.min(Math.max(boundedTop, 0), mainBoundsHeight - element.offsetHeight);
+            boundedLeft = Math.min(Math.max(boundedLeft, 0), mainBoundsWidth - element.offsetWidth);
 
             element.style.top = boundedTop + "px";
             element.style.left = boundedLeft + "px";

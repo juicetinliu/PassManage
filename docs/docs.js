@@ -1,4 +1,4 @@
-runTestCases();
+// runTestCases();
 
-let a = new App(document);
+let a = new App();
 a.run();
