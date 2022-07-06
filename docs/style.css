@@ -160,6 +160,7 @@ body {
 .p {
     margin: 15px;
     padding: 15px;
+    background-color: var(--background-white);
 }
   
 .p-out {

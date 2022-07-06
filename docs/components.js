@@ -385,7 +385,7 @@ class EncryptedInformationToggleButton extends IconButton {
 class SmallSquareLoader extends Component {
     constructor(app, page, id) {
         super("id", id, page, app);
-        this.SMALL_SQUARE_LOADER_CLASSES = "small-square-loader".split(" ");
+        this.SMALL_SQUARE_LOADER_CLASSES = "small-square-line-loader".split(" ");
     }
 
     create() {

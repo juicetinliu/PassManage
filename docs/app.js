@@ -42,7 +42,6 @@ class App {
 
         this.colorModeKey = "c";
         let storedColorMode = this.retrieveColorMode();
-        console.log(storedColorMode)
         this.currentColorMode = storedColorMode ? storedColorMode : this.COLOR_MODE.LIGHT;
         this.setColorMode(this.currentColorMode);
     }
