@@ -1,9 +1,14 @@
 const AppErrorType = {
+    CACHE_ERROR: "CacheError",
+
+    MISSING_APP_TOKEN: "AppTokenMissing",
     MISSING_MASTER_PASSWORD: "MasterPasswordMissing",
     INVALID_MASTER_PASSWORD: "MasterPasswordInvalid",
 
     GENERATING_MASTER_KEY: "GeneratingMasterKey",
-    INVALID_PASS_ENTRY_FIELD: "InvalidPassEntryField"
+    INVALID_PASS_ENTRY_FIELD: "InvalidPassEntryField",
+
+    SIGNIN_WEAK_PASSWORD: "WeakSigninPassword"
 }
 
 class AppError extends Error {

@@ -211,21 +211,13 @@ body {
     display: none !important;
 }
 
-.dark-mode #draggable-menu {
-    box-shadow: 10px 10px 15px var(--dark-shadow);
-    border: 0.5px outset var(--glass-border);
-}
-
-.light-mode #draggable-menu {
-    box-shadow: 10px 10px 15px var(--dark-shadow);
-    border: 0.5px outset var(--glass-border);
-}
-
 #draggable-menu {
     top: calc(50% - 170px);
     position: absolute;
     z-index: 20;
     background-color: var(--glass-background);
+    box-shadow: 10px 10px 15px var(--dark-shadow);
+    border: 0.5px outset var(--glass-border);
     cursor: move;
     backdrop-filter: blur( 2px );
     -webkit-backdrop-filter: blur( 2px );

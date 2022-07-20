@@ -1,6 +1,13 @@
-class App {
+import { PassManager, SimpleTimer, PassFile } from "./pass.js";
+import { CacheKeys, CacheManager } from "./cacher.js";
+import { IntroPage, DropPage, LoginPage, MainPage, EditPage } from "./pages.js";
+import { documentCreateElement, Element, DraggableMenu } from "./components.js";
+
+export class App {
     constructor() {
         this.passManager = new PassManager(this);
+
+        this.cacheManager = new CacheManager(this);
 
         this.appToken = "appToken";
 
@@ -32,21 +39,19 @@ class App {
         // URL Regex https://regexr.com/3e6m0
         this.WEBSITE_REGEXP = /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
 
-        this.CACHE_DURATION_S = this.passManager.CACHE_MASTER_KEY_DURATION_MS / 1000;
-        this.passCacheTimer = new SimpleTimer(this.CACHE_DURATION_S);
+        this.PASS_CACHE_DURATION_SECS = this.passManager.CACHE_MASTER_KEY_DURATION_MS / 1000;
+        this.passCacheTimer = new SimpleTimer(this.PASS_CACHE_DURATION_SECS);
 
         this.COLOR_MODE = {
             LIGHT: "light-mode",
             DARK: "dark-mode"
         }
 
-        this.colorModeKey = "c";
-        let storedColorMode = this.retrieveColorMode();
-        this.currentColorMode = storedColorMode ? storedColorMode : this.COLOR_MODE.LIGHT;
+        this.currentColorMode = this.cacheManager.retrieveInitialValueAndStore(CacheKeys.COLOR_THEME);
         this.setColorMode(this.currentColorMode);
     }
 
-    run() {
+    start() {
         this.setup();
         this.transitionFromIntro();
         this.main.show();
@@ -88,29 +93,29 @@ class App {
     }
 
     toggleLightDarkMode() {
-        if(this.currentColorMode === this.COLOR_MODE.LIGHT) {
-            this.currentColorMode = this.COLOR_MODE.DARK;
+        if(this.currentColorMode === CacheKeys.COLOR_THEME.LIGHT) {
+            this.currentColorMode = CacheKeys.COLOR_THEME.DARK;
         } else {
-            this.currentColorMode = this.COLOR_MODE.LIGHT;
+            this.currentColorMode = CacheKeys.COLOR_THEME.LIGHT;
         }
         this.setColorMode(this.currentColorMode);
         this.storeColorMode(this.currentColorMode);
     }
 
-    setColorMode(colorMode) {
+    setColorMode(mode) {
         Object.values(this.COLOR_MODE).forEach(mode => {
             document.body.classList.remove(mode);
         })
-        document.body.classList.add(colorMode);
+        document.body.classList.add(this.COLOR_MODE[mode]);
         this.draggableMenu.setLightDarkModeButtonIcon();
     }
 
     retrieveColorMode() {
-        return localStorage.getItem(this.colorModeKey);
+        return this.cacheManager.retrieve(CacheKeys.COLOR_THEME);
     }
 
     storeColorMode(colorMode) {
-        localStorage.setItem(this.colorModeKey, colorMode);
+        this.cacheManager.store(CacheKeys.COLOR_THEME, colorMode);
     }
 
     ___DEBUG_MAIN_PAGE() {

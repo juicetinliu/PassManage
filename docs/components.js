@@ -1,10 +1,12 @@
+import { CacheKeys } from "./cacher.js";
+
 const HtmlTypes = {
     CLASS: "CLASS",
     ID: "ID"
 };
 
 //helper function to create element with id and class on one line
-function documentCreateElement(elementType, id = null, classes = null) {
+export function documentCreateElement(elementType, id = null, classes = null) {
     let element = document.createElement(elementType);
     if(id) element.id = id;
     if(classes) {
@@ -17,7 +19,7 @@ function documentCreateElement(elementType, id = null, classes = null) {
     return element
 }
 
-class Element { //Any element that exists in HTML
+export class Element { //Any element that exists in HTML
     constructor(type, label) {
         this.type = this.getType(type);
         this.label = label;
@@ -148,7 +150,7 @@ class Element { //Any element that exists in HTML
     }
 }
 
-class Component extends Element{ //reusable, functional, and created elements
+export class Component extends Element{ //reusable, functional, and created elements
     constructor(type, label, page, app) {
         super(type, label);
         this.app = app;
@@ -319,7 +321,7 @@ class MaterialIcon extends Component {
     }
 }
 
-class IconButton extends Button {
+export class IconButton extends Button {
     constructor(app, page, id, iconName, hoverText = null) {
         super(app, page, id);
         this.icon = new MaterialIcon(this.app, this.page, this.label, iconName);
@@ -779,7 +781,7 @@ class MainHeaderRow extends Component {
     }
 }
 
-class MainTable extends Component {
+export class MainTable extends Component {
     constructor(app, page) {
         super("id", "main-table", page, app);
 
@@ -900,7 +902,7 @@ class MainTable extends Component {
     }
 }
 
-class MainOptionsKeyIndicator extends Component {
+export class MainOptionsKeyIndicator extends Component {
     constructor(app, page) {
         super("id", "main-page-option-key-indicator", page, app);
 
@@ -1085,7 +1087,7 @@ class MainOptionsKeyIndicator extends Component {
     }
 
     setCacheIndicatorCallBack(time) {
-        let percentage = 100 * time / this.app.CACHE_DURATION_S;
+        let percentage = 100 * time / this.app.PASS_CACHE_DURATION_SECS;
         this.setIndicator(percentage);
     }
 
@@ -1110,7 +1112,7 @@ class MainOptionsKeyIndicator extends Component {
     }
 }
 
-class MainOptionsSearch extends Component {
+export class MainOptionsSearch extends Component {
     constructor(app, page) {
         super("id", "main-page-option-search", page, app);
 
@@ -1188,7 +1190,7 @@ class MainOptionsSearch extends Component {
     }
 }
 
-class MainOptionsDownload extends Component {
+export class MainOptionsDownload extends Component {
     constructor(app, page) {
         super("id", "main-page-option-download", page, app);
         this.button = new IconButton(app, page, "main-page-option-download-button", "download", "Download file");
@@ -1253,7 +1255,7 @@ class EditTextArea extends Component {
     }
 }
 
-class EditView extends Component {
+export class EditView extends Component {
     constructor(app, page) {
         super("id", "edit-view", page, app);
 
@@ -1502,17 +1504,19 @@ class EditView extends Component {
     }
 }
 
-class DraggableMenu extends Component {
+export class DraggableMenu extends Component {
     constructor(app, page) {
         super("id", "draggable-menu", page, app);
         this.CLASSES = "p-round".split(" ");
 
-        this.HORIZONTAL = "h";
-        this.VERTICAL = "v";
+        this.ORIENTATIONS = {
+            HORIZONTAL: "h",
+            VERTICAL: "v"
+        }
 
-        this.orientation = this.HORIZONTAL;
+        this.orientation = this.app.cacheManager.retrieveInitialValueAndStore(CacheKeys.DRAGGABLE_MENU_ORIENTATION);
 
-        this.WRAPPER_CLASSES = (this.orientation + " hv-c vh-c").split(" ");
+        this.WRAPPER_CLASSES = (this.ORIENTATIONS[this.orientation] + " hv-c vh-c").split(" ");
         this.WRAPPER_ID = "draggable-menu-wrapper";
         this.wrapper = new Element("id", this.WRAPPER_ID);
 
@@ -1523,7 +1527,7 @@ class DraggableMenu extends Component {
         this.LIGHT_MODE_ICON = "light_mode";
         this.modeToggleButton = new IconButton(app, page, "draggable-menu-mode-toggle-button", this.LIGHT_MODE_ICON, "Toggle light/dark");
 
-        this.MENU_DRAGGABLE_HELP_TEXT = "Drag menu to sides to change orientation";
+        this.MENU_DRAGGABLE_HELP_TEXT = "Drag menu to edges to change orientation";
         this.helperTooltip = new Tooltip(this.app, this.page, this.label, this.MENU_DRAGGABLE_HELP_TEXT);
     }
 
@@ -1561,13 +1565,15 @@ class DraggableMenu extends Component {
             this.app.shownPage.referringPage.show(false);
         }.bind(this));
 
-        this.helperTooltip.createAndAlignToComponent(this.wrapper, "TOP");
+        let tooltipSide = "LEFT";
+        if(this.orientation === CacheKeys.DRAGGABLE_MENU_ORIENTATION.HORIZONTAL) tooltipSide = "TOP";
+        this.helperTooltip.createAndAlignToComponent(this.wrapper, tooltipSide);
         this.helperTooltip.setup();
         this.helperTooltip.show();
     }
 
     setLightDarkModeButtonIcon() {
-        if(this.app.currentColorMode === this.app.COLOR_MODE.LIGHT) {
+        if(this.app.currentColorMode === CacheKeys.COLOR_THEME.LIGHT) {
             this.modeToggleButton.setIcon(this.LIGHT_MODE_ICON);
         } else {
             this.modeToggleButton.setIcon(this.DARK_MODE_ICON);
@@ -1610,13 +1616,13 @@ class DraggableMenu extends Component {
 
             let orientation = null;
             if(boundedTop === 0) {
-                orientation = that.HORIZONTAL;
+                orientation = CacheKeys.DRAGGABLE_MENU_ORIENTATION.HORIZONTAL;
             } else if(boundedLeft === 0) {
-                orientation = that.VERTICAL;
+                orientation = CacheKeys.DRAGGABLE_MENU_ORIENTATION.VERTICAL;
             } else if(boundedTop === mainBoundsHeight - element.offsetHeight) {
-                if(element.offsetTop < mainBoundsHeight - element.offsetHeight) orientation = that.HORIZONTAL;
+                if(element.offsetTop < mainBoundsHeight - element.offsetHeight) orientation = CacheKeys.DRAGGABLE_MENU_ORIENTATION.HORIZONTAL;
             } else if(boundedLeft === mainBoundsWidth - element.offsetWidth) {
-                if(element.offsetLeft < mainBoundsWidth - element.offsetWidth) orientation = that.VERTICAL;
+                if(element.offsetLeft < mainBoundsWidth - element.offsetWidth) orientation = CacheKeys.DRAGGABLE_MENU_ORIENTATION.VERTICAL;
             }
             that.orientation = orientation;
             if(orientation) that.changeOrientation(that.orientation);
@@ -1636,15 +1642,20 @@ class DraggableMenu extends Component {
     }
 
     changeOrientation(orientation) {
-        let wrapper = this.wrapper.getElement();
-        if(orientation === this.HORIZONTAL) {
-            wrapper.classList.add(this.HORIZONTAL);
-            wrapper.classList.remove(this.VERTICAL);
-        } else if(orientation === this.VERTICAL) {
-            this.helperTooltip.setText("Awesome!");
+        if(this.app.cacheManager.retrieve(CacheKeys.DRAGGABLE_MENU_ORIENTATION) !== orientation) {
+            this.helperTooltip.setText("Nice!");
             this.helperTooltip.hide();
-            wrapper.classList.remove(this.HORIZONTAL);
-            wrapper.classList.add(this.VERTICAL);
+        }
+
+        let wrapper = this.wrapper.getElement();
+        if(orientation === CacheKeys.DRAGGABLE_MENU_ORIENTATION.HORIZONTAL) {
+            wrapper.classList.add(this.ORIENTATIONS.HORIZONTAL);
+            wrapper.classList.remove(this.ORIENTATIONS.VERTICAL);
+            this.app.cacheManager.store(CacheKeys.DRAGGABLE_MENU_ORIENTATION, orientation);
+        } else if(orientation === CacheKeys.DRAGGABLE_MENU_ORIENTATION.VERTICAL) {
+            wrapper.classList.remove(this.ORIENTATIONS.HORIZONTAL);
+            wrapper.classList.add(this.ORIENTATIONS.VERTICAL);
+            this.app.cacheManager.store(CacheKeys.DRAGGABLE_MENU_ORIENTATION, orientation);
         } else {
             throw new Error("Invalid orientation provided")
         }

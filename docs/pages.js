@@ -1,3 +1,5 @@
+import { Element, EditView, MainOptionsDownload, MainOptionsKeyIndicator, MainOptionsSearch, MainTable, IconButton } from "./components.js";
+
 class Page { 
     constructor(elementId, app) {
         this.pageElement = new Element("id", elementId);
@@ -46,7 +48,7 @@ class Page {
     }
 }
 
-class IntroPage extends Page {
+export class IntroPage extends Page {
     constructor(app) {
         super("intro-page", app);
     
@@ -86,7 +88,7 @@ class IntroPage extends Page {
     }
 }
 
-class EditPage extends Page {
+export class EditPage extends Page {
     constructor(app) {
         super("edit-page", app);
 
@@ -188,7 +190,7 @@ class EditPage extends Page {
     }
 }
 
-class MainPage extends Page {
+export class MainPage extends Page {
     constructor(app) {
         super("main-page", app);
 
@@ -263,7 +265,7 @@ class MainPage extends Page {
     }
 }
 
-class LoginPage extends Page {
+export class LoginPage extends Page {
     constructor(app) {
         super("login-page", app);
 
@@ -375,7 +377,7 @@ class LoginPage extends Page {
     }
 }
 
-class DropPage extends Page {
+export class DropPage extends Page {
     constructor(app) {
         super("drop-page", app);
 

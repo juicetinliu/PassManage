@@ -7,18 +7,20 @@
 
   <script language="javascript" type="text/javascript" src="https://juicetinliu.github.io/misc.js"></script>
   <script language="javascript" type="text/javascript" src="libraries/crypto-js.min.js"></script>
-  
   <script language="javascript" type="text/javascript" src="errors.js"></script>
   <script language="javascript" type="text/javascript" src="crypto.js"></script>
-  <script language="javascript" type="text/javascript" src="pass.js"></script>
-  <script language="javascript" type="text/javascript" src="components.js"></script>
-  <script language="javascript" type="text/javascript" src="pages.js"></script>
-  <script language="javascript" type="text/javascript" src="app.js"></script>
 
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="loading.css">
-  <link rel="stylesheet" href="tooltip.css">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,600,0,200" />
+  <script language="javascript" type="module" src="cacher.js"></script>
+  <script language="javascript" type="module" src="fire.js"></script>
+  <script language="javascript" type="module" src="pass.js"></script>
+  <script language="javascript" type="module" src="components.js"></script>
+  <script language="javascript" type="module" src="pages.js"></script>
+  <script language="javascript" type="module" src="app.js"></script>
+
+  <link type="text/css" rel="stylesheet" href="style.css">
+  <link type="text/css" rel="stylesheet" href="loading.css">
+  <link type="text/css" rel="stylesheet" href="tooltip.css">
+  <link type="text/css" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,600,0,200" />
 </head>
 
 <body class="light-mode">
@@ -109,5 +111,5 @@
 </body>
 
 <!-- run js after load to avoid using eventlistener onload – main view is hidden anyways while js setup runs -->
-<script language="javascript" type="text/javascript" src="docs.js"></script>
+<script language="javascript" type="module" src="docs.js"></script>
 </html>

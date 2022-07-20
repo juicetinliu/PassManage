@@ -108,7 +108,7 @@ class PassEntry {
     }
 }
 
-class PassManager {
+export class PassManager {
     constructor(app, config = PassConfig) {
         this.masterPasswordHash = null;
         this.deviceSecretHash = null;
@@ -558,7 +558,7 @@ class AESHandler extends PassHandler {
     }
 }
 
-class PassFile { // encrypt/decrypt with appToken
+export class PassFile { // encrypt/decrypt with appToken
     constructor(raw = "", config = PassConfig) {
         this.config = config;
         this.passHandler = new AESHandler();
@@ -613,7 +613,7 @@ class PassFile { // encrypt/decrypt with appToken
     }
 
     decryptFileAndProcess(key) {
-        if(!key) throw new Error("key needed to decrypt this PassFile");
+        if(!key) throw new AppError("key needed to decrypt this PassFile", AppErrorType.MISSING_APP_TOKEN);
 
         this.raw = this.passHandler.decryptToString(this.raw, key);
 
@@ -660,7 +660,7 @@ class PassFile { // encrypt/decrypt with appToken
     }
 }
 
-class SimpleTimer {
+export class SimpleTimer {
     constructor(duration, stepInterval = 1000) {
         this.duration = duration;
         this.callBacks = [];
@@ -708,7 +708,7 @@ class SimpleTimer {
     }
 }
 
-function runTestCases(){
+export function runTestCases(){
     let testPassEntryString = "Fb[|]website[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
     let testPassEntryString1 = "[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
     let testPassEntryString2 = "tag0[|]web[|][|]something[|]hehe[|]ok[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here";
