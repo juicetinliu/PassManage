@@ -167,7 +167,7 @@ export class Component extends Element{ //reusable, functional, and created elem
     } //any event listeners
 }
 
-class Tooltip extends Component {
+export class Tooltip extends Component {
     constructor(app, page, id, tooltipText = "", type = "DEFAULT") {
         super("id", "tooltip-" + id, page, app);
         this.TOOLTIP_CLASSES = "tooltip".split(" ");
@@ -204,9 +204,9 @@ class Tooltip extends Component {
     }
 
     setup() {
-        this.addEventListener(["click"], function() {
+        this.addEventListener(["click"], () => {
             this.hide();
-        }.bind(this));
+        });
     }
 
     createAndAlignToComponent(component, side = "BOTTOM") {
@@ -285,6 +285,26 @@ class Button extends Component {
         let element = documentCreateElement("button", this.label, this.BUTTON_CLASS);
         super.create();
         return element;
+    }
+}
+
+class TextInput extends Component {
+    constructor(app, page, id, inputType = "text") {
+        super("id", id, page, app);
+        this.TEXT_INPUT_CLASS = "text-input";
+        this.inputType = inputType;
+    }
+
+    create() {
+        let element = documentCreateElement("input", this.label, this.TEXT_INPUT_CLASS);
+        element.type = this.inputType;
+        element.name = this.label;
+        super.create();
+        return element;
+    }
+
+    setInputType(type) {
+        this.inputType = type;
     }
 }
 
@@ -458,10 +478,10 @@ class EncryptedInformation extends Component {
     setup() {
         if(!this.encryptedInfo) return;
 
-        this.toggleButton.addEventListener(['click'], function() {
+        this.toggleButton.addEventListener(['click'], () => {
             this.encrypted = !this.encrypted;
             this.toggleEncryption(this.encrypted);
-        }.bind(this));
+        });
     }
 
     async toggleEncryption(encrypted) {
@@ -474,7 +494,7 @@ class EncryptedInformation extends Component {
         } catch(e) {
             if(e instanceof AppError) {
                 if(e.isType(AppErrorType.GENERATING_MASTER_KEY) || e.isType(AppErrorType.MISSING_MASTER_PASSWORD)) {
-                    console.log(e);
+                    debugLog(e);
                     this.encrypted = !this.encrypted; //change back to previous state
                     await this.setTextAsync();
                     this.toggleButton.toggleVisiblity(this.encrypted);
@@ -637,13 +657,13 @@ class MainPassEntryRowMoreInfo extends Component {
 
     setup() {
         if(this.hasSecrets) this.secretsEncryptedInformation.setup();
-        this.editEntryButton.addEventListener(['click'], function() {
+        this.editEntryButton.addEventListener(['click'], () => {
             this.app.goToEditPage("edit", this.page, this.entry);
-        }.bind(this));
+        });
 
-        this.deleteEntryButton.addEventListener(['click'], function() {
+        this.deleteEntryButton.addEventListener(['click'], () => {
             this.app.deleteEntry(this.entry, this.page);
-        }.bind(this))
+        });
     }
 
     forceEncrypt() {
@@ -697,7 +717,7 @@ class MainPassEntryRow extends Component {
             if(header === this.PASSWORD_HEADER) {
                 entryColElement.appendChild(this.passwordEncryptedInformation.create());
             } else if (header === this.WEBSITE_HEADER && content) {
-                if(content.match(this.app.WEBSITE_REGEXP)) {
+                if(content.match(this.app.CONSTANTS.WEBSITE_REGEXP)) {
                     let address = content;
                     
                     let link = documentCreateElement("a", this.tag + "-" + this.LINK_ID, this.LINK_CLASS); //Eg. id=Google-link
@@ -731,10 +751,10 @@ class MainPassEntryRow extends Component {
         this.moreInfo.setup();
 
         this.toggleShowMore(this.showMore);
-        this.showMoreButton.addEventListener(["click"], function() {
+        this.showMoreButton.addEventListener(["click"], () => {
             this.showMore = !this.showMore;
             this.toggleShowMore(this.showMore);
-        }.bind(this));
+        });
     }
 
     toggleShowMore(showMore) {
@@ -892,9 +912,9 @@ export class MainTable extends Component {
     }
 
     _setupAddPassEntryButton() {
-        this.addPassEntryButton.addEventListener(["click"], function() {
+        this.addPassEntryButton.addEventListener(["click"], () => {
             this.app.goToEditPage("add", this.page);
-        }.bind(this));
+        });
     }
 
     forceEncrypt() {
@@ -982,7 +1002,7 @@ export class MainOptionsKeyIndicator extends Component {
         this.app.passCacheTimer.addCallBack(this.setCacheIndicatorCallBack.bind(this));
         this.app.passCacheTimer.addCallBack(this.fetchTimerValue.bind(this));
         
-        this.button.addEventListener(["click"], async function() {
+        this.button.addEventListener(["click"], async () => {
             if(this.longPressTimeout) {
                 clearTimeout(this.longPressTimeout);
                 this.longPressTimeout = null;
@@ -999,24 +1019,24 @@ export class MainOptionsKeyIndicator extends Component {
                     this.button.enable();
                 }
             }
-        }.bind(this));
+        });
 
-        this.button.addEventListener(["mouseup", "mouseout", "mouseleave"], function() {
+        this.button.addEventListener(["mouseup", "mouseout", "mouseleave"], () => {
             if(this.longPressTimeout) { //CANCEL LONG PRESS
                 clearTimeout(this.longPressTimeout);
                 this.longPressTimeout = null;
                 this.longPressed = false;
             }
-        }.bind(this));
+        });
 
-        this.button.addEventListener(["mousedown"], function(event) {
+        this.button.addEventListener(["mousedown"], (event) => {
             if (event.type === "click" && event.button !== 0) {
                 return;
             }
             this.longPressed = false;
         
             if(!this.longPressTimeout) { //LONG PRESSED
-                this.longPressTimeout = setTimeout(async function() {
+                this.longPressTimeout = setTimeout(async () => {
                     this.longPressed = true;
                     this.longPressTimeout = null;
 
@@ -1030,17 +1050,17 @@ export class MainOptionsKeyIndicator extends Component {
                         this.indicatorLoadingElement.hide();
                         this.button.enable();
                     }
-                }.bind(this), this.LONG_PRESS_DELAY_MS);
+                }, this.LONG_PRESS_DELAY_MS);
             }
-        }.bind(this));
+        });
 
-        this.button.addEventListener(["mouseenter", "mouseover"], function() {
+        this.button.addEventListener(["mouseenter", "mouseover"], () => {
             this.showIndicatorTimerText(false);
-        }.bind(this))
+        });
 
-        this.button.addEventListener(["mouseleave", "mouseout"], function() {
+        this.button.addEventListener(["mouseleave", "mouseout"], () => {
             this.hideIndicatorTimerText(true);
-        }.bind(this))
+        });
     }
 
     fetchTimerValue(time) {
@@ -1071,9 +1091,9 @@ export class MainOptionsKeyIndicator extends Component {
     hideIndicatorTimerText(withTimeout) {
         this._clearIndicatorTimerTextTimeout();
         if(withTimeout) {
-            this.showIndicatorTimerTextTimeout = setTimeout(function() {
+            this.showIndicatorTimerTextTimeout = setTimeout(() => {
                 this.indicatorTimerText.getElement().classList.remove(this.INDICATOR_TIMER_SHOW_CLASS);
-            }.bind(this), this.HIDE_TIMER_TEXT_DELAY_MS);
+            }, this.HIDE_TIMER_TEXT_DELAY_MS);
         } else {
             this.indicatorTimerText.getElement().classList.remove(this.INDICATOR_TIMER_SHOW_CLASS);
         }
@@ -1087,7 +1107,7 @@ export class MainOptionsKeyIndicator extends Component {
     }
 
     setCacheIndicatorCallBack(time) {
-        let percentage = 100 * time / this.app.PASS_CACHE_DURATION_SECS;
+        let percentage = 100 * time / this.app.CONSTANTS.PASS_CACHE_DURATION_SECS;
         this.setIndicator(percentage);
     }
 
@@ -1116,16 +1136,13 @@ export class MainOptionsSearch extends Component {
     constructor(app, page) {
         super("id", "main-page-option-search", page, app);
 
-        this.inputLabel = "input-search"
-        this.input = new Element("id", this.inputLabel);
-        this.icon = new MaterialIcon(app, page, this.inputLabel, "search");
+        let inputLabel = "input-search"
+        this.input = new TextInput(app, page, inputLabel);
+        this.icon = new MaterialIcon(app, page, inputLabel, "search");
         
         this.SEARCH_PANEL_CLASSES = "p p-out p-round".split(" ");
         this.SEARCH_PLACEHOLDER_TEXT_OPTIONS = ["Search for anything...", "Search for something...", "What are you looking for?", "Type something to search...", "What do you want?", "Finding something?"];
-        this.TEXT_INPUT_CLASS = "text-input";
-        this.INPUT_SEARCH_FOCUS_CLASS = "input-search-focus";
         this.ICON_DISABLED_CLASS = "input-search-icon-disabled";
-        this.inputType = "text";
     }
 
     create() {
@@ -1133,9 +1150,7 @@ export class MainOptionsSearch extends Component {
 
         let icon = this.icon.create();
 
-        let input = documentCreateElement("input", this.inputLabel, this.TEXT_INPUT_CLASS);
-        input.type = this.inputType;
-        input.name = this.inputLabel;
+        let input = this.input.create();
         
         element.appendChild(icon);
         element.appendChild(input);
@@ -1144,24 +1159,24 @@ export class MainOptionsSearch extends Component {
     }
 
     setup() {
-        this.input.addEventListener(["focus"], function() {
+        this.input.addEventListener(["focus"], () => {
             this._toggleSearchFocus(true);
             let searchText = this.getSearchValue();
             if(searchText) {
                 this.app.searchPassManagerEntries(searchText);
             }
-        }.bind(this));
+        });
 
-        this.input.addEventListener(["focusout"], function() {
+        this.input.addEventListener(["focusout"], () => {
             this._toggleSearchFocus(false);
-        }.bind(this));
+        });
 
-        this.input.addEventListener(["input"], function() {
+        this.input.addEventListener(["input"], () => {
             let searchText = this.getSearchValue();
             if(searchText) {
                 this.app.searchPassManagerEntries(searchText);
             }
-        }.bind(this));
+        });
     }
 
     _toggleSearchFocus(focusIn) {
@@ -1178,6 +1193,10 @@ export class MainOptionsSearch extends Component {
                 this.page.show(true);
             }
         }
+    }
+
+    reset() {
+        this.input.getElement.value = "";
     }
 
     getSearchValue() {
@@ -1204,9 +1223,9 @@ export class MainOptionsDownload extends Component {
     }
 
     setup() {
-        this.button.addEventListener(["click"], function() {
+        this.button.addEventListener(["click"], () => {
             this.app.downloadPassFile();
-        }.bind(this));
+        });
     }
 
     disable() {
@@ -1218,20 +1237,9 @@ export class MainOptionsDownload extends Component {
     }
 }
 
-class EditTextInput extends Component {
+class EditTextInput extends TextInput {
     constructor(app, page, field) {
-        super("id", "edit-text-input-" + field, page, app);
-
-        this.TEXT_INPUT_CLASS = "text-input";
-        this.inputType = "text";
-    }
-
-    create() {
-        let element = documentCreateElement("input", this.label, this.TEXT_INPUT_CLASS);
-        element.type = this.inputType;
-        element.name = this.label;
-
-        return element;
+        super(app, page, "edit-text-input-" + field);
     }
 
     setInputType(type) {
@@ -1261,7 +1269,7 @@ export class EditView extends Component {
 
         this.config = app.passManager.config;
 
-        this.actionTypes = page.actionTypes;
+        this.ACTION_TYPES = page.ACTION_TYPES;
         this.action;
 
         this.inputs = {}
@@ -1333,17 +1341,16 @@ export class EditView extends Component {
     }
 
     setup() {
-        this.cancelButton.addEventListener(["click"], function() {
+        this.cancelButton.addEventListener(["click"], () => {
             this.app.goToMainPage(this.page, false);
-        }.bind(this));
+        });
 
-        this.confirmButton.addEventListener(["click"], function() {
+        this.confirmButton.addEventListener(["click"], () => {
             let entry = this.convertInputValuesToEditPageEntry();
-            if(this.validateValues(entry)) return;
+            if(!this.validateValues(entry)) return;
             this.app.confirmEditPageEntry(entry, this.page);
-        }.bind(this));
+        });
         
-        this.setupInputValidations();     
         this.attachInputValidationErrorTooltips();
         this.setupInputCloseTooltipListeners();
     }
@@ -1367,31 +1374,26 @@ export class EditView extends Component {
         return {
             tag: [
                 {
-                    rule: (tag) => {return !tag || tag.match(/^ *$/);}, 
-                    tooltip: null, 
-                    error: "Entry must have a tag"
+                    isInvalid: (tag) => {return !tag || tag.match(/^ *$/);}, 
+                    errorMessage: "Entry must have a tag"
                 },
                 {
-                    rule: (tag) => {return tag.includes(" ");}, 
-                    tooltip: null, 
-                    error: "Tag must not contain spaces"
+                    isInvalid: (tag) => {return tag.includes(" ");}, 
+                    errorMessage: "Tag must not contain spaces"
                 },
                 {
-                    rule: (tag) => {return this.action === this.actionTypes.ADD && this.app.passManager.entryAlreadyExistsWithTag(tag);}, 
-                    tooltip: null, 
-                    error: "Entry cannot have same tag as existing entries"
+                    isInvalid: (tag) => {return this.action === this.ACTION_TYPES.ADD && this.app.passManager.entryAlreadyExistsWithTag(tag);}, 
+                    errorMessage: "Tag must be unique"
                 },
                 {
-                    rule: (tag) => {return this.action === this.actionTypes.EDIT && this.app.passManager.entryAlreadyExistsWithTag(tag, this.page.editEntry.tag);},
-                    tooltip: null, 
-                    error: "Entry cannot have same tag as existing entries"
+                    isInvalid: (tag) => {return this.action === this.ACTION_TYPES.EDIT && this.app.passManager.entryAlreadyExistsWithTag(tag, this.page.editEntry.tag);},
+                    errorMessage: "Tag must be unique"
                 }
             ],
             website: [
                 {
-                    rule: (website) => {return website && !website.match(this.app.WEBSITE_REGEXP);},
-                    tooltip: null, 
-                    error: "Website is invalid"
+                    isInvalid: (website) => {return website && !website.match(this.app.CONSTANTS.WEBSITE_REGEXP);},
+                    errorMessage: "Website is invalid"
                 }
             ]
         }
@@ -1406,7 +1408,7 @@ export class EditView extends Component {
 
 
             validations.forEach((validation, id) => {
-                let tt = new Tooltip(this.app, this.page, "edit-error-" + field + "-" + id, validation.error, "ERROR");
+                let tt = new Tooltip(this.app, this.page, "edit-error-" + field + "-" + id, validation.errorMessage, "ERROR");
                 tt.createAndAlignToComponent(fieldWrapper);
                 tt.setup();
                 tt.hide();
@@ -1420,7 +1422,7 @@ export class EditView extends Component {
             let field = fieldValidation[0];
             let validations = fieldValidation[1];
 
-            this.inputs[field].addEventListener(['click', 'focusin'], function() {
+            this.inputs[field].addEventListener(['click', 'focusin', 'input'], () => {
                 validations.forEach(validation => {
                     validation.tooltip.hide();
                 });
@@ -1429,8 +1431,7 @@ export class EditView extends Component {
     }
 
     hideValidationTooltips() {
-        Object.entries(this.inputValidations).forEach(fieldValidation => {
-            let validations = fieldValidation[1];
+        Object.values(this.inputValidations).forEach(validations => {
             validations.forEach(validation => {
                     validation.tooltip.hide();
             })
@@ -1438,16 +1439,17 @@ export class EditView extends Component {
     }
 
     validateValues(entry) {
-        let invalidInputOccurred = false; //We just want to show one invalid message
+        let noErrors = true; //We just want to show one invalid message
         Object.entries(this.inputValidations).forEach(fieldValidation => {
             let field = fieldValidation[0];
             let validations = fieldValidation[1];
-            let inputRow = new Element("id", this.EDIT_VIEW_ROW_ID_PREFIX + field)
+            let inputElement = this.inputs[field].getElement();
 
             validations.forEach(validation => {
-                if(!invalidInputOccurred && validation.rule(entry[field])) {
-                    invalidInputOccurred = true;
-                    let topPos = inputRow.getElement().offsetTop;
+                if(noErrors && validation.isInvalid(entry[field])) {
+                    inputElement.focus();
+                    noErrors = false;
+                    let topPos = inputElement.offsetTop;
                     this.getElement().scrollTop = topPos - this.getElement().offsetTop;
                     validation.tooltip.show();
                 } else {
@@ -1455,7 +1457,7 @@ export class EditView extends Component {
                 }
             })
         })
-        return invalidInputOccurred;
+        return noErrors;
     }
 
     populateInputs(entry) {
@@ -1487,7 +1489,7 @@ export class EditView extends Component {
             input.getElement().placeholder = "";
         });
         this.hideValidationTooltips();
-        if(this.action === this.actionTypes.ADD) this.setupOptionalInputPlaceholdersForAdd();
+        if(this.action === this.ACTION_TYPES.ADD) this.setupOptionalInputPlaceholdersForAdd();
     }
 
     setupOptionalInputPlaceholdersForAdd() {
@@ -1552,18 +1554,19 @@ export class DraggableMenu extends Component {
     setup() {
         this.dragElement();
         this.homeButton.disable();
+        this.backButton.disable();
 
-        this.modeToggleButton.addEventListener(['click'], function() {
+        this.modeToggleButton.addEventListener(['click'], () => {
             this.app.toggleLightDarkMode();
-        }.bind(this));
+        });
 
-        this.homeButton.addEventListener(['click'], function() {
-            this.app.goToIntroPage(this.app.shownPage);
-        }.bind(this));
+        this.homeButton.addEventListener(['click'], () => {
+            this.app.goToLoginPage(this.app.shownPage);
+        });
 
-        this.backButton.addEventListener(['click'], function() {
+        this.backButton.addEventListener(['click'], () => {
             this.app.shownPage.referringPage.show(false);
-        }.bind(this));
+        });
 
         let tooltipSide = "LEFT";
         if(this.orientation === CacheKeys.DRAGGABLE_MENU_ORIENTATION.HORIZONTAL) tooltipSide = "TOP";

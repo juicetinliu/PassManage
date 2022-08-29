@@ -32,6 +32,37 @@
       <div id="main-panel" class="p p-out p-round">
         <div id="main-panel-loading" class="large-grid-loader"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
         <div id="main-pages" class="h hv-c vh-c">
+          <div id="login-page">
+            <div id="login-content" class="v hv-c vh-c">
+              <div id="input-login-wrapper-email">
+                <input id="input-login-email" type="email" name="login-email" class="text-input input-login" placeholder="Email">                  
+              </div>
+              <div id="input-login-wrapper-password">
+                <input id="input-login-password" type="password" name="login-password" class="text-input input-login" placeholder="Password">                    
+              </div>
+
+              <div id="login-create-buttons-content" class="h hv-c vh-c">
+                <button id="create-account-submit-button" class="butt butt-main butt-text butt-login">
+                  Create
+                </button>
+                <div id="login-create-buttons-spacer-text">|</div>
+                <button id="login-account-submit-button" class="butt butt-main butt-text butt-login">
+                  Log in
+                </button>
+              </div>
+              <div id="login-options-buttons-content" class="h hv-c vh-c">
+                -placeholder-
+              </div>
+            </div>
+            <div id="login-logged-in-content" class="v hv-c vh-c">
+              <div class="h hv-c vh-c">
+                You are logged in
+              </div>
+              <button id="logout-account-submit-button" class="butt butt-main butt-text butt-login">
+                Log out
+              </button>
+            </div>
+          </div>
           <div id="intro-page">
             <div id="intro-content" class="h hv-c vh-c">
               <div role="button" tabindex="0" id="intro-start-new-content" class="butt butt-main v hv-c vh-c intro-main-button">
@@ -58,9 +89,9 @@
               <!-- MainPage() generates content -->
             </div>
           </div>
-          <div id="login-page">
-            <div id="login-content" class="h hv-c vh-c">
-              <input id="input-password" type="password" name="input-password" class="text-input">
+          <div id="key-page">
+            <div id="key-content" class="h hv-c vh-c">
+              <input id="input-key" type="password" name="input-key" class="text-input">
             </div>
           </div>
           <div id="drop-page">
@@ -98,13 +129,21 @@
           </div>
         </div>
       </div>
+      <div id="key-page-skip-content" class="v vh-c hv-c">
+        <div id="key-page-skip-spacer-text">
+          - or -
+        </div>
+        <button id="key-page-skip-button" class="butt butt-main butt-text">
+          Skip
+        </button>
+      </div>
       <div id="login-page-skip-content" class="v vh-c hv-c">
         <div id="login-page-skip-spacer-text">
           - or -
         </div>
-        <div role="button" tabindex="0" id="login-page-skip-button" class="butt butt-main">
-          Skip
-        </div>
+        <button id="login-page-skip-button" class="butt butt-main butt-text">
+          Use offline
+        </button>
       </div>
     </div>
   </div>

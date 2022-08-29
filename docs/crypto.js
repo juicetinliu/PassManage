@@ -4,7 +4,7 @@ const CryptoWorkerFunctions = {
 }
 
 const CryptoWorkerFunctionParameters = {
-    PBKDF2: ["masterPasswordHash", "deviceSecretHash", "keySize", "iterations"]
+    PBKDF2: ["masterPasswordHash", "secretHash", "keySize", "iterations"]
 }
 
 class CryptoWorker extends Worker{

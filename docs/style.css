@@ -72,10 +72,7 @@ body {
 }
 
 #main-panel {
-    overflow: hidden;
-    max-width: 0px;
-    max-height: 0px;
-    transition: max-height 1s ease-in-out 0s, max-width 1s ease-in-out 0.1s;
+    /* overflow: hidden; */
 }
 
 /* https://stackoverflow.com/questions/2310734/how-to-make-html-text-unselectable */
@@ -202,6 +199,12 @@ body {
 .butt-main:hover {
     background-color: var(--action-blue);
 }
+
+.butt-text {
+    margin: 10px 0px;
+    padding: 10px;
+    height: 40px;
+}
   
 .butt:active {
     box-shadow: inset -10px -10px 15px var(--light-shadow), inset 10px 10px 15px var(--dark-shadow);
@@ -212,7 +215,7 @@ body {
 }
 
 #draggable-menu {
-    top: calc(50% - 170px);
+    top: calc(50% - 230px);
     position: absolute;
     z-index: 20;
     background-color: var(--glass-background);
@@ -232,6 +235,33 @@ body {
     height: 100%;
 }
 
+/* Login page styles */
+#login-content {
+    gap: 15px;
+    padding: 5px;
+}
+
+.input-login {
+    width: 200px;
+}
+
+#login-create-buttons-content {
+    gap: 20px;
+}
+
+#login-create-buttons-spacer-text {
+    color: var(--disabled-text-color);
+}
+
+
+#login-page-skip-spacer-text {
+    color: var(--disabled-text-color);
+}
+
+#login-page-skip-button {
+    width: 100px;
+}
+
 /* Intro page styles */
 #intro-content {
     flex-wrap: nowrap;
@@ -243,26 +273,21 @@ body {
     gap: 10px;
 }
 
-/* Login page styles */
-#login-page-skip-content {
+/* Key page styles */
+#key-page-skip-content {
     height: auto;
 }
 
-#submit-user-password-button {
+#submit-user-key-button {
     margin: 0px 0px 0px 15px;
 }
 
-#input-password {
+#input-key {
     width: 170px;
 }
 
-#login-page-skip-spacer-text {
+#key-page-skip-spacer-text {
     color: var(--disabled-text-color);
-}
-
-#login-page-skip-button {
-    width: 60px;
-    height: 30px;
 }
 
 /* Drop page styles */

@@ -24,9 +24,10 @@ const PassConfig = {
     EntryConfig: PassEntryConfig
 };
 
-class PassEntry {
+export class PassEntry {
     constructor(config = PassConfig) {
         this.config = config;
+        this.fireKey = null;
         this.initialize();
     }
 
@@ -37,20 +38,21 @@ class PassEntry {
         })
     }
 
-    export(forTableView = true) {
+    export(forTableView = true, forFire = false) {
         let out = {};
-        if(forTableView) { //just return useful entries
+        if(forTableView) { //just return useful fields for main table view
             this.config.EntryConfig.allFields.forEach(field => {
                 let processForTable = this.config.EntryConfig[field].forTable;
                 if(typeof processForTable === "function") {
                     out[field] = processForTable(this);
                 }
             })
-        } else { //return all entries for secondary view
+        } else { //return entry as object with all fields
             this.config.EntryConfig.allFields.forEach(field => {
                 out[field] = this[field];
             })
         }
+        if(forFire && this.fireKey) out["fireKey"] = this.fireKey;
         return out;
     }
 
@@ -106,15 +108,38 @@ class PassEntry {
         });
         return out;
     }
+
+    fromObject(obj) {
+        let entryConfig = this.config.EntryConfig;
+
+        let out = new PassEntry();
+        entryConfig.allFields.forEach((field) => {
+            let value = obj[field];
+            if(value) {
+                out.addOrSaveToField(field, value, true);
+            }
+        });
+        return out;
+    }
+
+    validate() {
+        if(!this.tag) throw new Error("Tag must exist for a pass entry");
+    }
+
+    setFireKey(key) {
+        this.fireKey = key;
+    }
 }
 
 export class PassManager {
     constructor(app, config = PassConfig) {
         this.masterPasswordHash = null;
-        this.deviceSecretHash = null;
+        this.secretHash = null;
 
-        this.fileSecret = null;
-        this.deviceSecret = null;
+
+        this.secretKey = null; //secretKey (stored in fire)
+        this.fileSecret = null; //hash of skey
+        this.fileSecretHash = null; 
 
         this.entries = [];
         this.passHandler = new AESHandler();
@@ -128,15 +153,13 @@ export class PassManager {
         this.CACHED_MASTER_KEY = null; 
         this.CACHE_MASTER_KEY_DURATION_MS = 5 * 60 * 1000; //Temporarily stored for 5 minutes
         this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = null;
-
-        this._generateSecrets(); //will be overwritten if passFile is uploaded
     }
 
-    RESET() {
-        this.deleteMasterPasswordHashAndKey();
-        this.setEntries([]);
+    async RESET(generateSecrets = true) {
         this.DESTROY_CACHED_MASTER_KEY();
-        this._generateSecrets();
+        this.deleteSecrets();
+        this.setEntries([]);
+        if(generateSecrets) await this.generateSecrets();
     }
 
     CACHE_MASTER_KEY(mk) {
@@ -147,9 +170,9 @@ export class PassManager {
     DESTROY_CACHED_MASTER_KEY(withTimeout = false) {
         this.CLEAR_DESTROY_CACHED_MASTER_KEY_TIMEOUT();
         if(withTimeout) {
-            this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = setTimeout(function() {
+            this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = setTimeout(() => {
                 this.deleteMasterPasswordHashAndKey();
-            }.bind(this), this.CACHE_MASTER_KEY_DURATION_MS);
+            }, this.CACHE_MASTER_KEY_DURATION_MS);
             this.app.passCacheTimer.start();
         } else {
             this.deleteMasterPasswordHashAndKey();
@@ -178,28 +201,82 @@ export class PassManager {
         this.CACHED_MASTER_KEY = null;
         this.masterPasswordHash = null;
         this.app.forceEncryptMainTable();
+        debugLog("Destroyed mp hash and key");
     }
 
-    _generateSecrets() {
-        let set = "abcdefghijklmnopqrstuvwxyz0123456789";
-        let s = "";
-        for(let i = 0; i < 20; i++){
-            s += set[Math.floor(Math.random() * set.length)];
+    deleteSecrets() {
+        this.fileSecret = null;
+        this.fileSecretHash = null;
+        this.secretHash = null;
+        debugLog("Destroyed secrets");
+    }
+
+    async generateSecrets() {
+        let sk = "";
+        let fireSecretKey = await this.app.fire.getSecretKey().then((fkey) => {
+            debugLog("skey fetched from fire!");
+            return fkey;
+        }).catch((error) => {
+            handleAppErrorType(error, AppErrorType.FIRE.NO_USER_SIGNED_IN, () => {
+                debugLog("No signed in user, skey not fetched from fire");
+            });
+        });
+        if(fireSecretKey) {
+            debugLog("Using fire skey to generate secrets");
+            sk = fireSecretKey;
+        } else {
+            debugLog("No fire skey, creating secrets from scratch");
+            let set = "abcdefghijklmnopqrstuvwxyz0123456789!@#$*ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            for(let i = 0; i < 20; i++){
+                sk += set[Math.floor(Math.random() * set.length)];
+            }
+            await this.app.fire.setSecretKey(sk).then(() => {
+                debugLog("skey uploaded to fire!");
+            }).catch((error) => {
+                handleAppErrorType(error, AppErrorType.FIRE.NO_USER_SIGNED_IN, () => {
+                    debugLog("No signed in user, skey not saved to fire");
+                });
+            });
         }
-        let fs = CryptoJS.SHA256(s).toString(this.config.SHA256ToStringEncoding);
-        let ds = CryptoJS.SHA256(fs).toString(this.config.SHA256ToStringEncoding)
-        this.saveSecrets(fs, ds);
+
+        let fs;
+        let fireFileSecret = await this.app.fire.getFileSecret().then((fs) => {
+            debugLog("fs fetched from fire!");
+            return fs;
+        }).catch((error) => {
+            handleAppErrorType(error, AppErrorType.FIRE.NO_USER_SIGNED_IN, () => {
+                debugLog("No signed in user, fs not fetched from fire");
+            });
+        });
+        if(fireFileSecret) {
+            debugLog("Using fire fs to generate secrets");
+            fs = fireFileSecret;
+        } else {
+            debugLog("No fire fs, creating fs from skey");
+            fs = CryptoJS.SHA256(sk).toString(this.config.SHA256ToStringEncoding);
+            await this.app.fire.setFileSecret(fs).then(() => {
+                debugLog("fs uploaded to fire!");
+            }).catch((error) => {
+                handleAppErrorType(error, AppErrorType.FIRE.NO_USER_SIGNED_IN, () => {
+                    debugLog("No signed in user, fs not saved to fire");
+                });
+            });
+        }
+        
+        let fsh = CryptoJS.SHA256(fs).toString(this.config.SHA256ToStringEncoding)
+        this.saveSecrets(fs, fsh);
     }
 
-    saveSecrets(fileSecret, deviceSecret) {
+    saveSecrets(fileSecret, fileSecretHash) {
         this.fileSecret = fileSecret;
-        this.deviceSecret = deviceSecret;
-        this.deviceSecretHash = CryptoJS.SHA256(this.deviceSecret).toString(this.config.SHA256ToStringEncoding);
+        this.fileSecretHash = fileSecretHash;
+        this.secretHash = CryptoJS.SHA256(this.fileSecretHash).toString(this.config.SHA256ToStringEncoding);
+        debugLog("Saved secrets");
     }
 
     generateMasterKey(retries = 0) {
         if(!this.masterPasswordHash) throw new AppError("Missing master password hash", AppErrorType.MISSING_MASTER_PASSWORD);
-        if(!this.deviceSecretHash) throw new Error("Missing device secret hash");
+        if(!this.secretHash) throw new Error("Missing secret hash");
 
         if(this.CACHED_MASTER_KEY) {
             return Promise.resolve(this.CACHED_MASTER_KEY);
@@ -207,11 +284,11 @@ export class PassManager {
         
         if(retries > this.cryptoWorker.MAX_REQUEST_RETRY) throw new AppError("Maximum number of retry requests reached; try again later", AppErrorType.GENERATING_MASTER_KEY);
         
-        this.app.disableDraggbleMenuHomeButton();
+        this.app.disableDraggableMenuHomeButton();
         
         let jobID = this.cryptoWorker.request(CryptoWorkerFunctions.PBKDF2, {
             masterPasswordHash: this.masterPasswordHash,
-            deviceSecretHash: this.deviceSecretHash,
+            secretHash: this.secretHash,
             keySize: 32,
             iterations: 100000
         });
@@ -223,12 +300,12 @@ export class PassManager {
                     setTimeout(async () => {
                         let retrymk = await this.generateMasterKey(retries + 1);
                         this.CACHE_MASTER_KEY(retrymk);
-                        this.app.enableDraggbleMenuHomeButton();
+                        this.app.enableDraggableMenuHomeButton();
                         resolve(retrymk);
                     }, this.cryptoWorker.REQUEST_RETRY_DELAY_MS);
                 } else {
                     this.CACHE_MASTER_KEY(mk);
-                    this.app.enableDraggbleMenuHomeButton();
+                    this.app.enableDraggableMenuHomeButton();
                     resolve(mk);
                 }
             }
@@ -264,7 +341,14 @@ export class PassManager {
                 }
             }
             editEntry.addOrSaveToField(field, value, true);
-        })
+        });
+        await this.app.fire.addOrSetPassEntry(editEntry).then(() => {
+            debugLog("Entry edited on fire!");
+        }).catch((error) => {
+            handleAppErrorType(error, AppErrorType.FIRE.NO_USER_SIGNED_IN, () => {
+                debugLog("No signed in user, entry not edited on fire");
+            });
+        });
     }
 
     async addPassEntry(input) {
@@ -290,6 +374,13 @@ export class PassManager {
         });
         
         this.entries.push(entry);
+        await this.app.fire.addOrSetPassEntry(entry).then(() => {
+            debugLog("Entry added to fire!");
+        }).catch((error) => {
+            handleAppErrorType(error, AppErrorType.FIRE.NO_USER_SIGNED_IN, () => {
+                debugLog("No signed in user, entry not added to fire");
+            });
+        });
     }
 
     _encryptString(str, masterKey) {
@@ -310,7 +401,7 @@ export class PassManager {
         let entryConfig = this.config.EntryConfig;
         if(!this.isPassEntryFieldValid(field)) throw new AppError(field + ' is an invalid PassEntry field to decrypt', AppErrorType.INVALID_PASS_ENTRY_FIELD);
         if(!entryConfig[field].isEncrypted) {
-            console.log("No need to decrypt " + field);
+            debugLog("No need to decrypt " + field);
             return encryptedString;
         }
         let masterKey = await this.generateMasterKey();
@@ -332,16 +423,25 @@ export class PassManager {
         out.setRawFromEntryStrings(
             this.fileSecret,
             this._entriesToString(),
-            this.deviceSecret,
+            this.fileSecretHash,
             encrypt,
-            this.app.appToken);
+            this.app.CONSTANTS.APP_TOKEN);
         
         return out;
     }
 
-    deletePassEntry(entry) {
+    async deletePassEntry(entry) {
         let deleteIndex = this.entryAlreadyExistsWithTag(entry.tag, null, true);
+        let deleteEntry = this._getPassEntryByTag(entry.tag);
+
         this.entries.splice(deleteIndex, 1);
+        await this.app.fire.deletePassEntry(deleteEntry).then(() => {
+            debugLog("Entry deleted from fire!");
+        }).catch((error) => {
+            handleAppErrorType(error, AppErrorType.FIRE.NO_USER_SIGNED_IN, () => {
+                debugLog("No signed in user, entry not deleted from fire");
+            });
+        });
     }
 
     isPassEntryFieldValid(field) {
@@ -467,9 +567,9 @@ class PassSearchRanker {
             scores[e.tag] = totalScore;
         })
 
-        copyEntries.sort(function(a, b) {
+        copyEntries.sort((a, b) => {
             return scores[b.tag] - scores[a.tag]; //larger value is better
-        }.bind(this));
+        });
 
         let returnEntries = copyEntries.splice(0, 5);
         return returnEntries;
@@ -552,7 +652,7 @@ class AESHandler extends PassHandler {
             returnVal = hash.toString(encoder);
         } catch(e) {
             returnVal = "";
-            console.log(e);
+            debugLog(e);
         }
         return returnVal;
     }
@@ -575,7 +675,7 @@ export class PassFile { // encrypt/decrypt with appToken
         try{ //only processing if unencrypted
             this.processFile();
         } catch(e) {
-            // console.log("Something went wrong just processing this Passfile. Maybe try decrypting it?");
+            debugLog("Something went wrong just processing this Passfile. Maybe try decrypting it?");
         }
     }
 
@@ -595,10 +695,10 @@ export class PassFile { // encrypt/decrypt with appToken
         return this.raw;
     }
 
-    setRawFromEntryStrings(fileSecret, entryStrings, deviceSecret, encrypt = false, appToken) {
+    setRawFromEntryStrings(fileSecret, entryStrings, fileSecretHash, encrypt = false, appToken) {
         this.rawEntries = entryStrings;
         this.first = fileSecret;
-        this.last = deviceSecret;
+        this.last = fileSecretHash;
 
         if(entryStrings.length) {
             this.raw = [this.first, this.rawEntries, this.last].join(this.config.PassEntrySeparator);
@@ -725,7 +825,7 @@ export function runTestCases(){
     testPassManager.entries = testPassManager.entriesFromStrings([testPassEntryString1]);
     if(testPassManager._entriesToString() !== testPassEntryString2) throw new Error ("Something is wrong with PassManager string conversion – uniquelyIdentifyEntries");
 
-    console.log("All tests passed");
+    debugLog("All tests passed");
 
     testPassManager.close();
 }

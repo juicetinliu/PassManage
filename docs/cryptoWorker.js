@@ -35,10 +35,10 @@ onmessage = function(e) {
 
         if(func === CryptoWorkerFunctions.PBKDF2) {
             let masterPasswordHash = parameters.masterPasswordHash;
-            let deviceSecretHash = parameters.deviceSecretHash;
+            let secretHash = parameters.secretHash;
             let keySize = parseInt(parameters.keySize);
             let iterations = parseInt(parameters.iterations);
-            result = CryptoJS.PBKDF2(masterPasswordHash, deviceSecretHash, {
+            result = CryptoJS.PBKDF2(masterPasswordHash, secretHash, {
                 keySize: keySize,
                 iterations: iterations
             }).toString();

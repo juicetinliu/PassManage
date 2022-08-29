@@ -26,6 +26,7 @@
 .tooltip-error {
     --tooltip-border-color: var(--red) !important;
     --tooltip-pointer-color: var(--red) !important;
+    z-index: 30;
 }
 
 .tooltip-show {
@@ -71,6 +72,7 @@
     bottom: calc(100% + var(--tooltip-pointer-height-px));
     left: 50%;
     transform: translateX(-50%);
+    width: max-content;
 }
 
 .tooltip-top::after {
@@ -88,6 +90,7 @@
     top: calc(100% + var(--tooltip-pointer-height-px));
     left: 50%;
     transform: translateX(-50%);
+    width: max-content;
 }
 
 .tooltip-bottom::after {

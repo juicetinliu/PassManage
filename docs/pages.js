@@ -1,19 +1,14 @@
-import { Element, EditView, MainOptionsDownload, MainOptionsKeyIndicator, MainOptionsSearch, MainTable, IconButton } from "./components.js";
+import { Element, EditView, MainOptionsDownload, MainOptionsKeyIndicator, MainOptionsSearch, MainTable, IconButton, Tooltip } from "./components.js";
 
 class Page { 
     constructor(elementId, app) {
         this.pageElement = new Element("id", elementId);
         this.app = app;
-        this.appPages = null;
         this.components = {};
 
         this.referringPage = null; //page that resulted in this one opening
 
         this.created = false;
-    }
-
-    setAppPages(pages) {
-        this.appPages = pages;
     }
 
     show() {
@@ -23,9 +18,9 @@ class Page {
         this.app.shownPage = this;
 
         if(!this.app.shownPage.referringPage) {
-            this.app.disableDraggbleMenuBackButton();
+            this.app.disableDraggableMenuBackButton();
         } else {
-            this.app.enableDraggbleMenuBackButton();
+            this.app.enableDraggableMenuBackButton();
         }
     }
 
@@ -57,30 +52,28 @@ export class IntroPage extends Page {
     }
 
     setup() {
-        this.startNewButton.addEventListener(["click"], function() {
+        this.startNewButton.addEventListener(["click"], async () => {
             this.app.keyCreated = false;
-            this.app.RESET_PASS_MANAGER();
+            await this.app.RESET_PASS_MANAGER();
             this.app.goToMainPage(this);
-            this.app.enableDraggbleMenuHomeButton();
-        }.bind(this));
+        });
 
-        this.fromFileButton.addEventListener(["click"], function() {
+        this.fromFileButton.addEventListener(["click"], () => {
             this.app.keyCreated = true;
             this.app.goToDropPage(this);
-            this.app.enableDraggbleMenuHomeButton();
-        }.bind(this));
+        });
 
-        this.startNewButton.addEventListener(["keydown"], function(event) {
+        this.startNewButton.addEventListener(["keydown"], (event) => {
             if(event.key === 'Space' || event.keyCode === 32 || event.key === 'Enter' || event.keyCode === 13){
                 this.startNewButton.getElement().click();
             }
-        }.bind(this));
+        });
 
-        this.fromFileButton.addEventListener(["keydown"], function(event) {
+        this.fromFileButton.addEventListener(["keydown"], (event) => {
             if(event.key === 'Space' || event.keyCode === 32 || event.key === 'Enter' || event.keyCode === 13){
                 this.fromFileButton.getElement().click();
             }
-        }.bind(this));
+        });
     }
 
     show() {
@@ -94,7 +87,7 @@ export class EditPage extends Page {
 
         this.config = app.passManager.config;
 
-        this.actionTypes = {
+        this.ACTION_TYPES = {
             ADD: "add",
             EDIT: "edit"
         }
@@ -107,7 +100,7 @@ export class EditPage extends Page {
 
         this.editEntry = null;
 
-        this.action = this.actionTypes.ADD; //ADD or EDIT
+        this.action = this.ACTION_TYPES.ADD; //ADD or EDIT
     }
     
     setup() {
@@ -115,13 +108,13 @@ export class EditPage extends Page {
     }
 
     setAction(action) {
-        if(action === this.actionTypes.ADD) {
-            this.action = this.actionTypes.ADD;
-        } else if (action === this.actionTypes.EDIT) {
-            this.action = this.actionTypes.EDIT;
+        if(action === this.ACTION_TYPES.ADD) {
+            this.action = this.ACTION_TYPES.ADD;
+        } else if (action === this.ACTION_TYPES.EDIT) {
+            this.action = this.ACTION_TYPES.EDIT;
         } else {
-            console.log("invalid action " + action + "; defaulting to ADD");
-            this.action = this.actionTypes.ADD;
+            debugLog("invalid action " + action + "; defaulting to ADD");
+            this.action = this.ACTION_TYPES.ADD;
         }
         this.components.editView.setAction(this.action);
     }
@@ -132,12 +125,16 @@ export class EditPage extends Page {
 
     show(update = true) {
         if(update) {
-            this.components.editView.reset();
-            if(this.action === this.actionTypes.EDIT && this.editEntry) {
+            this.reset();
+            if(this.action === this.ACTION_TYPES.EDIT && this.editEntry) {
                 this.components.editView.populateInputs(this.editEntry);
             }
         }
         super.show()
+    }
+
+    reset() {
+        this.components.editView.reset();
     }
 
     create() {
@@ -147,9 +144,9 @@ export class EditPage extends Page {
     }
 
     confirmEditEntry(entry) {
-        if(this.action === this.actionTypes.ADD) {
+        if(this.action === this.ACTION_TYPES.ADD) {
             this.app.addPassEntry(entry, this);
-        } else if (this.action === this.actionTypes.EDIT) {
+        } else if (this.action === this.ACTION_TYPES.EDIT) {
             let diff = this._processEditEntry(entry);
             let changeTag = this.editEntry.tag;
             this.app.editPassEntry(changeTag, diff, this);
@@ -229,10 +226,13 @@ export class MainPage extends Page {
     create() {
         super.create();
 
-        let entries = this.app.getPassManagerEntries();
-
         this._createOptionsBar();
-        this._createMainTable(entries);
+        this._createMainTable();
+    }
+
+    reset() {
+        this.updateMainTableEntries([]);
+        this.components.mainSearchInput.reset();
     }
 
     _createOptionsBar() {
@@ -245,7 +245,7 @@ export class MainPage extends Page {
         this.mainOptionsBar.appendChild(download);
     }
 
-    _createMainTable(entries) {
+    _createMainTable(entries = []) {
         let table = this.components.mainTable.create(entries);
 
         this.mainContent.appendChild(table);
@@ -271,105 +271,394 @@ export class LoginPage extends Page {
 
         this.loginContent = new Element("id", "login-content");
 
+        this.INPUT_LOGIN_WRAPPER_ID_PREFIX = "input-login-wrapper-";
+        this.inputs = {
+            email: new Element("id", "input-login-email"),
+            password: new Element("id", "input-login-password")
+        }
+
+        this.submitCreateButton = new Element("id", "create-account-submit-button");
+        this.submitLoginButton = new Element("id", "login-account-submit-button");
+
+        this.loginOptionsContent = new Element("id", "login-options-buttons-content");
+
         this.loginSkipContent = new Element("id", "login-page-skip-content");
         this.loginSkipContentButton = new Element("id", "login-page-skip-button");
-        this.LOGIN_CANCEL_TEXT = "Cancel";
-        this.LOGIN_SKIP_TEXT = "Skip";
 
-        this.inputPassword = new Element("id", "input-password");
-        
-        
-        this.submitUserPasswordButton = new IconButton(app, this, "submit-user-password-button", "arrow_forward");
+        this.loggedInContent = new Element("id", "login-logged-in-content");
+        this.submitLogoutButton = new Element("id", "logout-account-submit-button");
 
-        this.callBackAfterLogin = null;
-        this.PASSWORD_INPUT_PLACEHOLDER = "Enter your key 🔑";
-        this.PASSWORD_INPUT_CREATE_PLACEHOLDER = "Create your key 🔑";
-    }
-
-    setCallBackAfterLogin(callBack) {
-        this.callBackAfterLogin = callBack;
+        this.inputValidations = this.setupInputValidations();
+        this.firebaseLoginErrorTooltips = this.createAndAttachFirebaseLoginErrorTooltips();
     }
 
     setup() {
         super.setup();
-        this.inputPassword.getElement().placeholder = this.PASSWORD_INPUT_PLACEHOLDER;
-        this.inputPassword.addEventListener(["input"], function() {
-            this.toggleSubmitButton();
-        }.bind(this));
-        
-        this.submitUserPasswordButton.addEventListener(["click"], function() {
-            let pw = this.inputPassword.getElement().value;
-            this.validatePassword(pw);
-            this._clearPasswordInput();
-            this._savePasswordToApp(pw);
-            this.callBackAfterLogin = null;
-        }.bind(this));
 
-        // https://stackoverflow.com/questions/7060750/detect-the-enter-key-in-a-text-input-field
-        this.inputPassword.addEventListener(["keyup"], function(event) {
+        this.inputs.email.addEventListener(["keyup"], (event) => {
             if(event.key === 'Enter' || event.keyCode === 13){
-                this.submitUserPasswordButton.getElement().click();
+                this.inputs.password.getElement().focus();
             }
-        }.bind(this));
+        });
 
-        this.loginSkipContentButton.addEventListener(["click"], function() {
-            this._clearPasswordInput();
-            if(!this.callBackAfterLogin) {//If there is no callBack then we must be entering login from fileDrop – make sure to direct to main view
-                this.app.goToMainPage(this);
-            } else {//Otherwise callBack must be from a referring page – we allow a cancel to bring user back to referring page
-                //We make sure not to update the referring page to keep its previous state
-                this.referringPage.show(false);
+        this.inputs.password.addEventListener(["keyup"], (event) => {
+            if(event.key === 'Enter' || event.keyCode === 13){
+                this.submitLoginButton.getElement().click();
             }
-        }.bind(this));
+        });
 
-        this.loginSkipContentButton.addEventListener(["keydown"], function(event) {
-            if(event.key === 'Space' || event.keyCode === 32 || event.key === 'Enter' || event.keyCode === 13){
-                this.loginSkipContentButton.getElement().click();
+        this.submitLoginButton.addEventListener(["click"], async () => {
+            let emailInput = this.inputs.email.getElement();
+            let email = emailInput.value;
+            let password = this.inputs.password.getElement().value;
+            if(!this.validateValues()) return;
+
+            this.hide();
+            try {
+                await this.app.signInFireAccount(email, password);
+            } catch (error) {
+                this.handleFireActionErrorWithTooltips(error, "login");
             }
-        }.bind(this));
+        });
+
+        this.submitCreateButton.addEventListener(["click"], async () => {
+            let emailInputElement = this.inputs.email.getElement();
+            let email = emailInputElement.value;
+            let password = this.inputs.password.getElement().value;
+            if(!this.validateValues()) return;
+
+            this.hide();
+            try {
+                await this.app.createNewFireAccount(email, password);
+            } catch (error) {
+                this.handleFireActionErrorWithTooltips(error, "create");
+            }
+        });
+
+        this.loginSkipContentButton.addEventListener(["click"], async () => {
+            await this.app.signOutFireAccount();
+            this.app.goToIntroPage(this);
+        });
+
+        this.submitLogoutButton.addEventListener(["click"], async () => {
+            await this.app.signOutFireAccount();
+            this.app.goToLoginPage(this);
+        });
+
+        this.attachInputValidationErrorTooltips();
+        this.setupInputCloseTooltipListeners();
     }
 
-    _clearPasswordInput() {
-        this.inputPassword.getElement().value = "";
+    handleFireActionErrorWithTooltips(error, action) {
+        this.hideAllFirebaseLoginErrorTooltips();
+        if(error instanceof AppError) {
+            let errorTooltip = this.firebaseLoginErrorTooltips[error.type];
+            if(errorTooltip) {
+                errorTooltip.show();
+            } else {
+                throw new Error("Shouldn't reach this in " + action + " account");
+            }
+        } else {
+            throw new Error("Shouldn't reach this in " + action + " account");
+        }
     }
 
     create() {
         super.create();
-        let button = this.submitUserPasswordButton.create();
-        this.loginContent.appendChild(button);
+        this.loginOptionsContent.hide();
+    }
+
+    show() {
+        super.show();
+        this.loginSkipContent.show();
+        this.app.disableDraggableMenuHomeButton();
+
+        if(this.app.isFireLoggedIn()) {
+            this.loggedInContent.show();
+            this.loginContent.hide();
+        } else {
+            this.loginContent.show();
+            this.loggedInContent.hide();
+        }
     }
 
     hide() {
         super.hide();
         this.loginSkipContent.hide();
+        this.hideTooltips();
+        this.app.enableDraggableMenuHomeButton();
+    }
+
+    clearPasswordInput() {
+        this.inputs.password.getElement().value = "";
+    }
+
+    setupInputValidations() {
+        return {
+            email: [
+                {
+                    isInvalid: (email) => {return !email || !email.length;}, 
+                    errorMessage: "Please provide an email"
+                },
+                {
+                    isInvalid: (email, element) => {return (typeof element.checkValidity === 'function' ? !element.checkValidity() : !/\S+@\S+\.\S+/.test(email));}, 
+                    errorMessage: "Email is invalid"
+                }
+            ],
+            password: [
+                {
+                    isInvalid: (password) => {return !password || !password.length;},
+                    errorMessage: "Please provide a password"
+                },
+                {
+                    isInvalid: (password) => {return password.length < 8},
+                    errorMessage: "Password should have at least 8 characters"
+                }
+            ]
+        }
+    }
+
+    setupFirebaseLoginErrorTooltips() {
+        return {
+            email: {
+                "user-not-found": {
+                    appError: AppErrorType.FIRE.SIGN_IN_ERROR.USER_NOT_FOUND,
+                    errorMessage: "Email not found",
+                },
+                "email-in-use": {
+                    appError: AppErrorType.FIRE.CREATE_ACCOUNT_ERROR.EMAIL_IN_USE,
+                    errorMessage: "Email already in use",
+                },
+                "invalid-email": {
+                    appError: AppErrorType.FIRE.INVALID_EMAIL,
+                    errorMessage: "Email is invalid",
+                },
+            },
+            password: {
+                "incorrect-password": {
+                    appError: AppErrorType.FIRE.SIGN_IN_ERROR.WRONG_PASSWORD,
+                    errorMessage: "Password is incorrect",
+                },
+                "password-weak": {
+                    appError: AppErrorType.FIRE.CREATE_ACCOUNT_ERROR.WEAK_PASSWORD,
+                    errorMessage: "Password is weak",
+                },
+                "something-wrong-create": {
+                    appError: AppErrorType.FIRE.CREATE_ACCOUNT_ERROR.GENERAL,
+                    errorMessage: "Something went wrong creating this account"
+                },
+                "something-wrong-login": {
+                    appError: AppErrorType.FIRE.SIGN_IN_ERROR.GENERAL,
+                    errorMessage: "Something went wrong logging in this account"
+                },
+                "too-many-requests": {
+                    appError: AppErrorType.FIRE.SIGN_IN_ERROR.TOO_MANY_REQUESTS,
+                    errorMessage: "Too many incorrect login attempts, try again later"
+                },
+            }
+        }
+    }
+
+    createAndAttachFirebaseLoginErrorTooltips() {
+        let tooltips = {};
+        Object.entries(this.setupFirebaseLoginErrorTooltips()).forEach(fieldErrors => {
+            let field = fieldErrors[0];
+            let errors = fieldErrors[1];
+
+            let inputWrapper = new Element("id", this.INPUT_LOGIN_WRAPPER_ID_PREFIX + field);
+
+            Object.entries(errors).forEach(idError => {
+                let id = idError[0];
+                let error = idError[1];
+                
+                let tt = new Tooltip(this.app, this, "login-fire-error-" + field + "-" + id, error.errorMessage, "ERROR");
+                tt.createAndAlignToComponent(inputWrapper, "TOP");
+                tt.setup();
+                tt.hide();
+                tooltips[error.appError] = tt;
+            })
+        })
+
+        return tooltips;
+    }
+
+    hideAllFirebaseLoginErrorTooltips() {
+        Object.values(this.firebaseLoginErrorTooltips).forEach(tooltip => {
+            tooltip.hide();
+        });
+    }
+
+    attachInputValidationErrorTooltips() {
+        Object.entries(this.inputValidations).forEach(fieldValidation => {
+            let field = fieldValidation[0];
+            let validations = fieldValidation[1];
+
+            let inputWrapper = new Element("id", this.INPUT_LOGIN_WRAPPER_ID_PREFIX + field);
+
+            validations.forEach((validation, id) => {
+                let tt = new Tooltip(this.app, this, "login-error-" + field + "-" + id, validation.errorMessage, "ERROR");
+                tt.createAndAlignToComponent(inputWrapper, "TOP");
+                tt.setup();
+                tt.hide();
+                validation.tooltip = tt;
+            })
+        })
+    }
+
+    setupInputCloseTooltipListeners() {
+        Object.entries(this.inputValidations).forEach(fieldValidation => {
+            let field = fieldValidation[0];
+            let validations = fieldValidation[1];
+
+            this.inputs[field].addEventListener(['click', 'focusin', 'input'], () => {
+                validations.forEach(validation => {
+                    validation.tooltip.hide();
+                });
+                this.hideAllFirebaseLoginErrorTooltips();                
+            })
+        });
+    }
+
+    hideTooltips() {
+        Object.values(this.inputValidations).forEach(validations => {
+            validations.forEach(validation => {
+                    validation.tooltip.hide();
+            })
+        })
+        this.hideAllFirebaseLoginErrorTooltips();                
+    }
+
+
+    validateValues() {
+        let noErrors = true; //We just want to show one invalid message
+        Object.entries(this.inputValidations).forEach(fieldValidation => {
+            let field = fieldValidation[0];
+            let validations = fieldValidation[1];
+            let inputElement = this.inputs[field].getElement();
+
+            validations.forEach(validation => {
+                if(noErrors && validation.isInvalid(inputElement.value, inputElement)) {
+                    inputElement.focus();
+                    noErrors = false;
+                    validation.tooltip.show();
+                } else {
+                    validation.tooltip.hide();
+                }
+            })
+        })
+        return noErrors;
+    }
+}
+
+export class KeyPage extends Page {
+    constructor(app) {
+        super("key-page", app);
+
+        this.keyContent = new Element("id", "key-content");
+
+        this.keySkipContent = new Element("id", "key-page-skip-content");
+        this.keySkipContentButton = new Element("id", "key-page-skip-button");
+        this.KEY_CANCEL_TEXT = "Cancel";
+        this.KEY_SKIP_TEXT = "Skip";
+
+        this.inputKey = new Element("id", "input-key");
+        
+        
+        this.submitUserKeyButton = new IconButton(app, this, "submit-user-key-button", "arrow_forward");
+
+        this.callBackAfterKeyEntered = null;
+        this.KEY_INPUT_PLACEHOLDER = "Enter your key 🔑";
+        this.KEY_INPUT_CREATE_PLACEHOLDER = "Create your key 🔑";
+    }
+
+    setCallBackAfterKeyEntered(callBack) {
+        this.callBackAfterKeyEntered = callBack;
+    }
+
+    setup() {
+        super.setup();
+        this.inputKey.getElement().placeholder = this.KEY_INPUT_PLACEHOLDER;
+        this.inputKey.addEventListener(["input"], () => {
+            this.toggleSubmitButton();
+        });
+        
+        this.submitUserKeyButton.addEventListener(["click"], () => {
+            let pw = this.inputKey.getElement().value;
+            this.validatePassword(pw);
+            this._clearKeyInput();
+            this._savePasswordToApp(pw);
+            this.callBackAfterKeyEntered = null;
+        });
+
+        // https://stackoverflow.com/questions/7060750/detect-the-enter-key-in-a-text-input-field
+        this.inputKey.addEventListener(["keyup"], (event) => {
+            if(event.key === 'Enter' || event.keyCode === 13){
+                this.submitUserKeyButton.getElement().click();
+            }
+        });
+
+        this.keySkipContentButton.addEventListener(["click"], () => {
+            this._clearKeyInput();
+            if(!this.callBackAfterKeyEntered) {//If there is no callBack then we must be entering key page from fileDrop – make sure to direct to main view
+                this.app.goToMainPage(this);
+            } else {//Otherwise callBack must be from a referring page – we allow a cancel to bring user back to referring page
+                //We make sure not to update the referring page to keep its previous state
+                this.referringPage.show(false);
+            }
+        });
+
+        this.keySkipContentButton.addEventListener(["keydown"], (event) => {
+            if(event.key === 'Space' || event.keyCode === 32 || event.key === 'Enter' || event.keyCode === 13){
+                this.keySkipContentButton.getElement().click();
+            }
+        });
+    }
+
+    _clearKeyInput() {
+        this.inputKey.getElement().value = "";
+    }
+
+    reset() {
+        this._clearKeyInput();
+    }
+
+    create() {
+        super.create();
+        let button = this.submitUserKeyButton.create();
+        this.keyContent.appendChild(button);
+    }
+
+    hide() {
+        super.hide();
+        this.keySkipContent.hide();
     }
 
     show() {
         super.show();
-        this.inputPassword.getElement().placeholder = this.app.keyCreated ? this.PASSWORD_INPUT_PLACEHOLDER : this.PASSWORD_INPUT_CREATE_PLACEHOLDER;
+        this.inputKey.getElement().placeholder = this.app.keyCreated ? this.KEY_INPUT_PLACEHOLDER : this.KEY_INPUT_CREATE_PLACEHOLDER;
 
-        this.inputPassword.getElement().focus();
-        this.submitUserPasswordButton.disable();
-        if(!this.callBackAfterLogin) { //If there is no callBack then we must be entering login from fileDrop - we allow a skip straight to main view
-            this.loginSkipContentButton.getElement().innerHTML = this.LOGIN_SKIP_TEXT;
-            this.loginSkipContent.show();
+        this.inputKey.getElement().focus();
+        this.submitUserKeyButton.disable();
+        if(!this.callBackAfterKeyEntered) { //If there is no callBack then we must be entering key page from fileDrop - we allow a skip straight to main view
+            this.keySkipContentButton.getElement().innerHTML = this.KEY_SKIP_TEXT;
+            this.keySkipContent.show();
         } else { //Otherwise callBack must be from a referring page – we allow a cancel to bring user back to referring page 
-            this.loginSkipContentButton.getElement().innerHTML = this.LOGIN_CANCEL_TEXT;
-            this.loginSkipContent.show();
+            this.keySkipContentButton.getElement().innerHTML = this.KEY_CANCEL_TEXT;
+            this.keySkipContent.show();
         }
         this.toggleSubmitButton();
     }
 
     toggleSubmitButton() {
-        if(this.inputPassword.getElement().value) {
-            this.submitUserPasswordButton.enable();
+        if(this.inputKey.getElement().value) {
+            this.submitUserKeyButton.enable();
         }else{
-            this.submitUserPasswordButton.disable();
+            this.submitUserKeyButton.disable();
         }
     }
 
     _savePasswordToApp(p) {
-        this.app.savePasswordToPassManager(p, this, this.callBackAfterLogin);
+        this.app.savePasswordToPassManager(p, this, this.callBackAfterKeyEntered);
     }
 
     validatePassword(password) {
@@ -381,7 +670,7 @@ export class DropPage extends Page {
     constructor(app) {
         super("drop-page", app);
 
-        this.inputPasswordFile = new Element("id", "input-password-file");
+        this.inputKeyFile = new Element("id", "input-password-file");
         this.dropPanel = new Element("id", "drop-panel");
         this.dropZone = new Element("id", "drop-zone");
         
@@ -397,17 +686,17 @@ export class DropPage extends Page {
     }
 
     setup() {
-        this.dropZone.addEventListener(["drop"], function(event) {
+        this.dropZone.addEventListener(["drop"], (event) => {
             this._setDropPanelClass(true);
             this._dropZoneDropHandler(event);
-        }.bind(this));
+        });
 
-        this.dropZone.addEventListener(["dragenter"], function(event) {
+        this.dropZone.addEventListener(["dragenter"], (event) => {
             this._setDropPanelClass(false, true);
             this._dropZoneDragOverHandler(event);
-        }.bind(this));
+        });
                     
-        this.inputPasswordFile.addEventListener(["change"], function(event) {
+        this.inputKeyFile.addEventListener(["change"], (event) => {
             let files = event.target.files;
 
             if (!files.length || files.length > 1) { //only 1 file allowed
@@ -415,35 +704,35 @@ export class DropPage extends Page {
             }
 
             this.app.setRawPassFile(files[0]);
-            this.inputPasswordFile.getElement().value = ""; //clear stored file after uploading
+            this.inputKeyFile.getElement().value = ""; //clear stored file after uploading
             this._confirmRawPassFile();
-        }.bind(this));
+        });
 
-        this.inputPasswordFile.addEventListener(["mousedown", "focus", "focusin"], function() {
+        this.inputKeyFile.addEventListener(["mousedown", "focus", "focusin"], () => {
             this._setDropPanelClass(true);
-        }.bind(this));
+        });
 
-        this.inputPasswordFile.addEventListener(["mouseover", "mousein"], function() {
+        this.inputKeyFile.addEventListener(["mouseover", "mousein"], () => {
             this._setDropPanelClass(false, true);
-        }.bind(this));
+        });
 
-        this.inputPasswordFile.addEventListener(["mouseup", "mouseout", "focusout", "dragleave"], function() {
+        this.inputKeyFile.addEventListener(["mouseup", "mouseout", "focusout", "dragleave"], () => {
             this._setDropPanelClass(false);
-        }.bind(this));
+        });
 
-        this.cancelPassFileButton.addEventListener(["click"], function() {
+        this.cancelPassFileButton.addEventListener(["click"], () => {
             this._appDeleteRawPassFile();
             this.show();
-        }.bind(this));
+        });
 
-        this.confirmPasswordFileErrorButton.addEventListener(["click"], function() {
+        this.confirmPasswordFileErrorButton.addEventListener(["click"], () => {
             this._appDeleteRawPassFile();
             this.show();
-        }.bind(this));
+        });
 
-        this.confirmPassFileButton.addEventListener(["click"], function() {
+        this.confirmPassFileButton.addEventListener(["click"], () => {
             this._appExtractRawPassFile(this);
-        }.bind(this));
+        });
     }
 
     show(update, fileDrop = true) {
