@@ -4,6 +4,28 @@ import { IntroPage, DropPage, KeyPage, MainPage, EditPage, LoginPage } from "./p
 import { documentCreateElement, Element, DraggableMenu } from "./components.js";
 import { Fire } from "./fire.js";
 
+export class MobileAppWIP {
+    constructor() {
+        this.main = new Element("id", "main");
+        this.mainWrapper = new Element("id", "main-wrapper");
+    }
+
+    start() {
+        this.mainWrapper.delete();
+        let messageBlock = documentCreateElement("div", null, "v vh-c hv-c".split(" "));
+
+        messageBlock.innerHTML = '<div id="main-panel-loading" class="large-grid-loader"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>';
+
+        let message = documentCreateElement("div");
+        message.style.paddingTop = "40px";
+        message.innerHTML = "Work In Progress"
+        messageBlock.appendChild(message);
+
+        this.main.getElement().appendChild(messageBlock);
+        this.main.show();
+    }
+}
+
 export class App {
     constructor() {
         this.fire = new Fire();

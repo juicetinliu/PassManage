@@ -16,7 +16,7 @@ export function documentCreateElement(elementType, id = null, classes = null) {
             element.classList.add(classes);
         }
     }
-    return element
+    return element;
 }
 
 export class Element { //Any element that exists in HTML

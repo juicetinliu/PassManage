@@ -1,7 +1,11 @@
-import { App } from "./app.js";
+import { App, MobileAppWIP } from "./app.js";
 import { runTestCases } from "./pass.js";
 
 // runTestCases();
-let a = new App();
-
-a.start();
+if(!is_mobile_or_tablet_view()) {
+    let a = new App();
+    a.start();
+} else {
+    let a = new MobileAppWIP();
+    a.start();
+}
