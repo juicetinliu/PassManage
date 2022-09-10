@@ -21,6 +21,11 @@ export class MobileAppWIP {
         message.innerHTML = "Work In Progress"
         messageBlock.appendChild(message);
 
+        let message2 = documentCreateElement("div");
+        message2.style.paddingTop = "40px";
+        message2.innerHTML =  "Try it on Desktop! 🖥️"
+        messageBlock.appendChild(message2);
+
         this.main.getElement().appendChild(messageBlock);
         this.main.show();
     }
