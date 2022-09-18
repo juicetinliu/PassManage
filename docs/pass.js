@@ -143,7 +143,12 @@ export class PassManager {
 
         this.entries = [];
         this.passHandler = new AESHandler();
+
+        this.canUseCryptoWorker = false;
         this.cryptoWorker = new CryptoWorker();
+        this.verifyCryptoWorker();
+        this.fallbackMobileWorker = new FallbackMobileWorker();
+
         this.passSearchRanker = new PassSearchRanker();
 
         this.app = app;
@@ -153,6 +158,28 @@ export class PassManager {
         this.CACHED_MASTER_KEY = null; 
         this.CACHE_MASTER_KEY_DURATION_MS = 5 * 60 * 1000; //Temporarily stored for 5 minutes
         this.DESTROY_CACHED_MASTER_KEY_TIMEOUT = null;
+    }
+
+    async verifyCryptoWorker(retries = 0) {
+        let pingJobID = this.cryptoWorker.request(CryptoWorkerFunctions.PING);
+
+        let pingAnswer = await new Promise(resolve => {
+            let onmessageRun = (event) => {
+                let answer = this.cryptoWorker.getResponseForID(event, pingJobID);
+                if(answer === CryptoWorkerStates.NOT_MY_RESULT) { //retry after small delay
+                    setTimeout(async () => {
+                        let retryAnswer = await this.verifyCryptoWorker(retries + 1);
+                        resolve(retryAnswer);
+                    }, this.cryptoWorker.REQUEST_RETRY_DELAY_MS);
+                } else {
+                    resolve(answer);
+                }
+            }
+            this.cryptoWorker.pushToOnmessageQueue(onmessageRun);
+        });
+
+        debugLog("CryptoWorker says: " + pingAnswer);
+        this.canUseCryptoWorker = pingAnswer === CryptoWorkerStates.IM_PRESENT;
     }
 
     async RESET(generateSecrets = true) {
@@ -286,31 +313,47 @@ export class PassManager {
         
         this.app.disableDraggableMenuHomeButton();
         
-        let jobID = this.cryptoWorker.request(CryptoWorkerFunctions.PBKDF2, {
-            masterPasswordHash: this.masterPasswordHash,
-            secretHash: this.secretHash,
-            keySize: 32,
-            iterations: 100000
-        });
+        if(this.canUseCryptoWorker) {
+            let jobID = this.cryptoWorker.request(CryptoWorkerFunctions.PBKDF2, {
+                masterPasswordHash: this.masterPasswordHash,
+                secretHash: this.secretHash,
+                keySize: 32,
+                iterations: 100000
+            });
 
-        return new Promise(resolve => {
-            let onmessageRun = (event) => {
-                let mk = this.cryptoWorker.getResponseForID(event, jobID);
-                if(mk === CryptoWorkerFunctions.NOTMYRESULT) { //retry after small delay
-                    setTimeout(async () => {
-                        let retrymk = await this.generateMasterKey(retries + 1);
-                        this.CACHE_MASTER_KEY(retrymk);
+            return new Promise(resolve => {
+                let onmessageRun = (event) => {
+                    let mk = this.cryptoWorker.getResponseForID(event, jobID);
+                    if(mk === CryptoWorkerStates.NOT_MY_RESULT) { //retry after small delay
+                        setTimeout(async () => {
+                            let retrymk = await this.generateMasterKey(retries + 1);
+                            this.CACHE_MASTER_KEY(retrymk);
+                            this.app.enableDraggableMenuHomeButton();
+                            resolve(retrymk);
+                        }, this.cryptoWorker.REQUEST_RETRY_DELAY_MS);
+                    } else {
+                        this.CACHE_MASTER_KEY(mk);
                         this.app.enableDraggableMenuHomeButton();
-                        resolve(retrymk);
-                    }, this.cryptoWorker.REQUEST_RETRY_DELAY_MS);
-                } else {
+                        resolve(mk);
+                    }
+                }
+                this.cryptoWorker.pushToOnmessageQueue(onmessageRun);
+            });
+        } else {
+            return new Promise(resolve => {
+                setTimeout(async () => {
+                    let mk = await this.fallbackMobileWorker.request(CryptoWorkerFunctions.PBKDF2, {
+                        masterPasswordHash: this.masterPasswordHash,
+                        secretHash: this.secretHash,
+                        keySize: 32,
+                        iterations: 100000
+                    });
                     this.CACHE_MASTER_KEY(mk);
                     this.app.enableDraggableMenuHomeButton();
                     resolve(mk);
-                }
-            }
-            this.cryptoWorker.pushToOnmessageQueue(onmessageRun);
-        });
+                }, 100);
+            });
+        }
     }
 
     _getPassEntryByTag(tag) {
@@ -571,7 +614,7 @@ class PassSearchRanker {
             return scores[b.tag] - scores[a.tag]; //larger value is better
         });
 
-        let returnEntries = copyEntries.splice(0, 5);
+        let returnEntries = copyEntries.splice(0, 5); //show top 5 entries
         return returnEntries;
     }
 

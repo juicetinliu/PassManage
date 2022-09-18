@@ -62,17 +62,12 @@ body {
     position: relative; /* for draggable menu */
     width: 100%;
     height: 100%;
-    overflow-y: overlay;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 #main-wrapper {
     flex-wrap: nowrap;
     height: auto;
-}
-
-#main-panel {
-    /* overflow: hidden; */
 }
 
 /* https://stackoverflow.com/questions/2310734/how-to-make-html-text-unselectable */
@@ -184,6 +179,13 @@ body {
     padding: 5px;
     transition: background-color 1s, box-shadow 1s;
     border: none;
+    color: var(--text-color);
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .butt-main {
@@ -253,6 +255,9 @@ body {
     color: var(--disabled-text-color);
 }
 
+#login-page-skip-content {
+    height: auto;
+}
 
 #login-page-skip-spacer-text {
     color: var(--disabled-text-color);
@@ -349,14 +354,13 @@ body {
 #edit-content {
     background-color: var(--not-too-white);
     height: -webkit-fill-available;
+    width: auto;
 }
 
 #edit-view {
     width: 100%;
-    padding-right: 15px;
-    gap: 10px;
-    overflow-y: overlay;
     flex-wrap: nowrap;
+    gap: 5px;
 }
 
 #edit-view-cancel-button {
@@ -375,7 +379,16 @@ body {
     background-color: var(--highlight-green);
 }
 
-.edit-view-row {
+#edit-view-row-wrapper {
+    width: 100%;
+    padding-right: 15px;
+    gap: 10px;
+    overflow-y: overlay;
+    flex-wrap: nowrap;
+    max-height: 500px;
+}
+
+.edit-view-row, .edit-view-row-footer {
     flex-wrap: nowrap;
 }
 
@@ -399,32 +412,39 @@ body {
 #main-content {
     background-color: var(--not-too-white);
     height: -webkit-fill-available;
+    width: 800px;
 }
 
 /* Main page options styles */
 
 #main-page-options {
     justify-content: space-between;
+    position: relative;
 }
 
 #input-search {
     transition: border-color 1s, width 0.3s;
 }
 
+.input-search-expanded {
+    width: 250px;
+}
+
 #input-search-icon {
     position: absolute;
-    top: 18px;
-    left: 19px;
-    transition: opacity 0.3s, font-size 0.3s;
+    top: 50%;
+    left: 0;
+    transform: translate(calc(2ex - 15px), -50%);
+    transition: opacity 0.3s;
 }
 
 .input-search-icon-disabled {
     opacity: 0;
-    font-size: 0 !important;
 }
 
 #main-page-option-search {
-    position: relative;
+    position: absolute;
+    z-index: 10;
 }
 
 #main-page-option-key-indicator {
@@ -443,6 +463,26 @@ body {
     opacity: 1.0 !important;
     max-width: 100px !important;
 }
+
+.main-page-option-key-indicator-timer-pulse {
+    animation: main-page-option-key-indicator-timer-pulse 1s ease-in-out;
+}
+
+@keyframes main-page-option-key-indicator-timer-pulse {
+    0% {
+        color: var(--background-white);
+        border-color: var(--background-white);
+    }
+    20% {
+        color: var(--action-blue);
+        border-color: var(--action-blue);
+    }
+    100% {
+        color: var(--disabled-text-color);
+        border-color: var(--disabled-text-color);
+    }
+}
+
 
 #main-page-option-key-indicator-button {
     position: relative;
@@ -463,7 +503,7 @@ body {
 }
 
 #main-page-option-download {
-    
+    margin: 15px 15px 15px 0px;
 }
 
 #main-page-option-download-button {
@@ -476,7 +516,8 @@ body {
 }
 
 .entry-table {
-    flex-wrap: nowrap
+    flex-wrap: nowrap;
+    max-height: 600px;
 }
 
 .entry-table-content {
@@ -512,7 +553,9 @@ body {
 }
 
 .wrapper-row {
+    flex-wrap: nowrap;
     width: 100%;
+    height: auto;
 }
 
 .main-entry-more-info {
@@ -533,7 +576,7 @@ body {
     flex-wrap: nowrap;
     gap: 10px;
     width: auto;
-    height: -webkit-fill-available;
+    height: calc(100% - 15px);
 }
 
 .main-entry-more-info-button-content {
@@ -552,7 +595,6 @@ body {
 .main-entry-more-info-content-wrapper {
     overflow-y: auto;
     height: 100%;
-    width: -webkit-fill-available;
 }
 
 .main-entry-more-info-content-stuff {

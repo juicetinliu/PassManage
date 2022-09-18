@@ -42,6 +42,8 @@ onmessage = function(e) {
                 keySize: keySize,
                 iterations: iterations
             }).toString();
+        } else if(func === CryptoWorkerFunctions.PING) {
+            result = CryptoWorkerStates.IM_PRESENT;
         }
 
         processResult(result, thisJob); 

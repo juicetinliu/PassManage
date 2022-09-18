@@ -1,7 +1,7 @@
 import { PassManager, SimpleTimer, PassFile } from "./pass.js";
 import { CacheKeys, CacheManager } from "./cacher.js";
 import { IntroPage, DropPage, KeyPage, MainPage, EditPage, LoginPage } from "./pages.js";
-import { documentCreateElement, Element, DraggableMenu } from "./components.js";
+import { documentCreateElement, Element, DraggableMenu, RandomGifLoader } from "./components.js";
 import { Fire } from "./fire.js";
 
 export class MobileAppWIP {
@@ -32,7 +32,7 @@ export class MobileAppWIP {
 }
 
 export class App {
-    constructor() {
+    constructor(isMobile = false) {
         this.fire = new Fire();
         this.fireLoggedIn = false;
 
@@ -41,6 +41,8 @@ export class App {
 
         this.main = new Element("id", "main");
         this.mainPanel = new Element("id", "main-panel");
+        this.mobileMainPanel = new Element("id", "mobile-main-panel")
+
         this.mainLoading = new Element("id", "main-panel-loading");
 
         this.draggableMenu = new DraggableMenu(this, null);
@@ -77,6 +79,7 @@ export class App {
             WEBSITE_REGEXP: /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g,
 
             PASS_CACHE_DURATION_SECS: this.passManager.CACHE_MASTER_KEY_DURATION_MS / 1000,
+            IS_MOBILE: isMobile
         }
 
         this.passCacheTimer = new SimpleTimer(this.CONSTANTS.PASS_CACHE_DURATION_SECS);
@@ -88,8 +91,11 @@ export class App {
     }
 
     setup(){
+        this.setupDeviceView();
+        this.setupLoader();
         this.setupDraggableMenu();
         Object.values(this.pages).forEach(p => p.setup());
+        this.setupMainPageForMobile();
         this.mainLoading.hide();
 
         this.pages.LoginPage.show();
@@ -101,10 +107,42 @@ export class App {
         // this.___DEBUG_MAIN_PAGE();
     }
 
+    isMobileView() {
+        return this.CONSTANTS.IS_MOBILE;
+    }
+
+    setupDeviceView() {
+        document.body.classList.add(this.isMobileView() ? "mobile-view" : "desktop-view");
+    }
+
+    setupLoader() {
+        let gridLoaderWrapper = new Element("id", "grid-loader-wrapper");
+        let gifLoaderWrapper = new Element("id", "gif-loader-wrapper");
+        if (this.isMobileView()) {
+            gridLoaderWrapper.hide();
+            gifLoaderWrapper.show();
+            this.mainLoading = new RandomGifLoader(this, null);
+        } else {
+            gridLoaderWrapper.show();
+            gifLoaderWrapper.hide();
+        }
+    }
+
     setupDraggableMenu() {
         let draggableMenu = this.draggableMenu.create();
-        this.main.getElement().appendChild(draggableMenu);
+        if (this.isMobileView()) {
+            this.main.getElement().appendChild(draggableMenu);
+        } else {
+            this.main.getElement().appendChild(draggableMenu);
+        }
         this.draggableMenu.setup();
+    }
+
+    setupMainPageForMobile() {
+        if (this.isMobileView()) {
+            let mainPage = this.pages.MainPage.pageElement.getElement();
+            this.mobileMainPanel.getElement().appendChild(mainPage);
+        }
     }
 
     disableDraggableMenuBackButton() {
@@ -211,7 +249,7 @@ export class App {
 
     ___DEBUG_MAIN_PAGE() {
         // FOR DEBUGGING
-        let testEntryStrings = ['Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]'];
+        let testEntryStrings = ['Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]','Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]','Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]','Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]','Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]','Fb[|]website.com[|]user[|]something[|]hehe[|]pass[|]this[*]secret[|]what[*]the[*]heck[|]comment[*]here', 'Google[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]comment[*]here', 'What[|]website.com[|][|]something[|]hehe[|]pass[|][|]what[*]the[*]heck[|]'];
         let e = this.passManager.entriesFromStrings(testEntryStrings);
         this.passManager.setEntries(e);
 
@@ -423,6 +461,10 @@ export class App {
     }
 
     async generateMasterKeyForIndicator(referringPage, component) {
+        if(this.isMobileView()) {
+            this.hideAllPages();
+            this.mainLoading.show();
+        }
         this.disableDraggableMenuBackButton();
 
         try {
@@ -431,13 +473,16 @@ export class App {
             handleAppErrorType(e, AppErrorType.MISSING_MASTER_PASSWORD, () => {
                 let callBackAfterKeyEntered = async () => {
                     component.getElement().click();
-                    this.goToMainPage(null, false);
+                    if(!this.isMobileView()) {
+                        this.goToMainPage(null, false);
+                    }
                     this.disableDraggableMenuHomeButton();
                 };
                 this.goToKeyPage(referringPage, callBackAfterKeyEntered);
             });
             return;
         }
+        this.goToMainPage(null, false);
     }
 
 

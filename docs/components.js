@@ -702,45 +702,97 @@ class MainPassEntryRow extends Component {
         this.moreInfo = new MainPassEntryRowMoreInfo(app, page, this.fullEntry);
 
         this.showMore = false;
+
+        this.isMobileLayout = this.app.isMobileView();
+        this.TAG_HEADER = passEntryConfig.tag.value;
+        this.ENTRY_ROW_HEADER_WRAPPER_CLASSES = "h hv-l vh-c entry-row-header-wrapper".split(" ");
     }
 
     create() {
         let wrapper = documentCreateElement("div", this.label + "-wrapper", this.WRAPPER_CLASSES);
         let element = documentCreateElement("div", this.label, this.ENTRY_ROW_CLASSES);
 
-        // Populate entry rows with entry fields
-        Object.entries(this.entry).forEach(field => {
-            let header = field[0];
-            let content = field[1];
-            let entryColElement = documentCreateElement("div", this.tag + "-" + header, this.ENTRY_COL_CLASS); //Eg. id="Google-tag"
-            
-            if(header === this.PASSWORD_HEADER) {
-                entryColElement.appendChild(this.passwordEncryptedInformation.create());
-            } else if (header === this.WEBSITE_HEADER && content) {
-                if(content.match(this.app.CONSTANTS.WEBSITE_REGEXP)) {
-                    let address = content;
-                    
-                    let link = documentCreateElement("a", this.tag + "-" + this.LINK_ID, this.LINK_CLASS); //Eg. id=Google-link
-                    link.href = "//" + content; //stops from appending onto current url
-                    link.target = "_blank";
-                    link.innerHTML = address;
-                    entryColElement.appendChild(link);
-                } else {
-                    entryColElement.innerHTML = content;
-                }
-            } else {
-                entryColElement.innerHTML = content ? content : this.EMPTY_FIELD_TEXT;
-            }
+        let headerWrapper = documentCreateElement("div", this.label + "-header-wrapper", this.ENTRY_ROW_HEADER_WRAPPER_CLASSES);
+        if(this.isMobileLayout) {
+            // Populate entry rows with entry fields
+            Object.entries(this.entry).forEach(field => {
+                let header = field[0];
+                let content = field[1];
+                let contentID = this.tag + "-" + header;
 
-            element.appendChild(entryColElement);
-        })
+                if(header === this.TAG_HEADER) {
+                    let contentWrapper = documentCreateElement("div", contentID, "entry-tag");
+                    contentWrapper.innerHTML = content;
+                    headerWrapper.appendChild(contentWrapper);
+                } else if (header === this.WEBSITE_HEADER) {
+                    if(content) {
+                        let contentWrapper = documentCreateElement("div", contentID);
+                        if(content.match(this.app.CONSTANTS.WEBSITE_REGEXP)) {
+                            let address = content;
+                            
+                            let link = documentCreateElement("a", this.tag + "-" + this.LINK_ID, this.LINK_CLASS); //Eg. id=Google-link
+                            link.href = "//" + content; //stops from appending onto current url
+                            link.target = "_blank";
+                            link.innerHTML = address;
+                            contentWrapper.appendChild(link);
+                        } else {
+                            contentWrapper.innerHTML = content;
+                        }
+                        let dividerElement = documentCreateElement("div", null, "entry-row-header-website-divider");
+                        dividerElement.innerHTML = "|";
+
+                        headerWrapper.appendChild(dividerElement);
+                        headerWrapper.appendChild(contentWrapper);
+                    }
+                } else {
+                    let entryColElement = documentCreateElement("div", contentID, this.ENTRY_COL_CLASS); //Eg. id="Google-tag"
+
+                    if(header === this.PASSWORD_HEADER) {
+                        entryColElement.appendChild(this.passwordEncryptedInformation.create());
+                    } else {
+                        entryColElement.innerHTML = content ? content : this.EMPTY_FIELD_TEXT;
+                    }
+
+                    element.appendChild(entryColElement);
+                }
+            })
+            wrapper.appendChild(headerWrapper);
+        } else {
+            // Populate entry row with entry fields
+            Object.entries(this.entry).forEach(field => {
+                let header = field[0];
+                let content = field[1];
+                let entryColElement = documentCreateElement("div", this.tag + "-" + header, this.ENTRY_COL_CLASS); //Eg. id="Google-tag"
+
+                
+                if(header === this.PASSWORD_HEADER) {
+                    entryColElement.appendChild(this.passwordEncryptedInformation.create());
+                } else if (header === this.WEBSITE_HEADER && content) {
+                    if(content.match(this.app.CONSTANTS.WEBSITE_REGEXP)) {
+                        let address = content;
+                        
+                        let link = documentCreateElement("a", this.tag + "-" + this.LINK_ID, this.LINK_CLASS); //Eg. id=Google-link
+                        link.href = "//" + content; //stops from appending onto current url
+                        link.target = "_blank";
+                        link.innerHTML = address;
+                        entryColElement.appendChild(link);
+                    } else {
+                        entryColElement.innerHTML = content;
+                    }
+                } else {
+                    entryColElement.innerHTML = content ? content : this.EMPTY_FIELD_TEXT;
+                }
+
+                element.appendChild(entryColElement);
+            })
+        }
 
         let showMoreButton = this.showMoreButton.create();
         showMoreButton.classList.add(this.SHOW_MORE_BUTTON_CLASS);
         element.appendChild(showMoreButton);
-        let moreInfo = this.moreInfo.create();
-       
         wrapper.appendChild(element);
+
+        let moreInfo = this.moreInfo.create();
         wrapper.appendChild(moreInfo);
 
         return wrapper;
@@ -848,15 +900,16 @@ export class MainTable extends Component {
 
     create(entries = []) {
         let element = documentCreateElement("div", this.label, this.ENTRY_TABLE_CLASSES);
-        element.style.maxHeight = is_mobile_or_tablet_view() ? "60vh" : "600px";
 
-        let headerContent = documentCreateElement("div", this.MAIN_TABLE_HEADER_CONTENT_ID, this.TABLE_CONTENT_CLASSES);
+        if(!this.app.isMobileView()) {
+            let headerContent = documentCreateElement("div", this.MAIN_TABLE_HEADER_CONTENT_ID, this.TABLE_CONTENT_CLASSES);
+            let headerRow = this.headerRow.create();
+            let headerRowDivider = this.headerRowDivider.create();
 
-        let headerRow = this.headerRow.create();
-        let headerRowDivider = this.headerRowDivider.create();
-
-        headerContent.appendChild(headerRow);
-        headerContent.appendChild(headerRowDivider);
+            headerContent.appendChild(headerRow);
+            headerContent.appendChild(headerRowDivider);
+            element.appendChild(headerContent);
+        }
 
         let entryContent = documentCreateElement("div", this.MAIN_TABLE_ENTRY_CONTENT_ID, this.TABLE_CONTENT_CLASSES);
 
@@ -868,7 +921,6 @@ export class MainTable extends Component {
 
         footerContent.appendChild(addPassEntryButton);
 
-        element.appendChild(headerContent);
         element.appendChild(entryContent);
         element.appendChild(footerContent);
 
@@ -934,10 +986,13 @@ export class MainOptionsKeyIndicator extends Component {
 
         this.HIDE_TIMER_TEXT_DELAY_MS = 3000;
         this.showIndicatorTimerTextTimeout = null;
+        this.PULSE_TIMER_TEXT_DELAY_MS = 1000;
+        this.pulseIndicatorTimerTextTimeout = null;
         this.NO_KEY_TEXT = "Locked";
         this.HELPER_TEXT = "Hold to refresh";
         this.INDICATOR_TIMER_ID = "main-page-option-key-indicator-timer";
         this.INDICATOR_TIMER_SHOW_CLASS = "main-page-option-key-indicator-timer-show";
+        this.INDICATOR_TIMER_PULSE_CLASS = "main-page-option-key-indicator-timer-pulse";
         this.indicatorTimerText = new Element("id", this.INDICATOR_TIMER_ID);
 
         this.SVG_INDICATOR_LOADING_ID = "key-button-progress-indicator-loading";
@@ -971,6 +1026,7 @@ export class MainOptionsKeyIndicator extends Component {
         wrapper.appendChild(timerText);
 
         let button = this.button.create();
+        button.oncontextmenu = function(){ return false; };
 
         //https://stackoverflow.com/questions/17520337/dynamically-rendered-svg-is-not-displaying
         let indicator = document.createElementNS(this.SVG_NAMESPACE, "svg");
@@ -1002,7 +1058,8 @@ export class MainOptionsKeyIndicator extends Component {
         this.app.passCacheTimer.addCallBack(this.setCacheIndicatorCallBack.bind(this));
         this.app.passCacheTimer.addCallBack(this.fetchTimerValue.bind(this));
         
-        this.button.addEventListener(["click"], async () => {
+        this.button.addEventListener(["click"], async (event) => {
+
             if(this.longPressTimeout) {
                 clearTimeout(this.longPressTimeout);
                 this.longPressTimeout = null;
@@ -1021,7 +1078,11 @@ export class MainOptionsKeyIndicator extends Component {
             }
         });
 
-        this.button.addEventListener(["mouseup", "mouseout", "mouseleave"], () => {
+        let cancelLongPressEvents = this.app.isMobileView() 
+                ? ["touchend", "touchcancel"]
+                : ["mouseup", "mouseout", "mouseleave"];
+
+        this.button.addEventListener(cancelLongPressEvents, (event) => {
             if(this.longPressTimeout) { //CANCEL LONG PRESS
                 clearTimeout(this.longPressTimeout);
                 this.longPressTimeout = null;
@@ -1029,7 +1090,12 @@ export class MainOptionsKeyIndicator extends Component {
             }
         });
 
-        this.button.addEventListener(["mousedown"], (event) => {
+
+        let registerLongPressEvents = this.app.isMobileView() 
+                ? ["touchstart"]
+                : ["mousedown"];
+
+        this.button.addEventListener(registerLongPressEvents, (event) => {
             if (event.type === "click" && event.button !== 0) {
                 return;
             }
@@ -1042,6 +1108,7 @@ export class MainOptionsKeyIndicator extends Component {
 
                     if(this.indicatorPercentage > 0) {
                         this.app.REFRESH_CACHED_MASTER_KEY_TIMEOUT();
+                        this.pulseIndicatorTimerText();
                     } else {
                         this.indicatorLoadingElement.show();
                         this.button.disable();
@@ -1049,6 +1116,7 @@ export class MainOptionsKeyIndicator extends Component {
                         this.showIndicatorTimerText(true);
                         this.indicatorLoadingElement.hide();
                         this.button.enable();
+                        this.longPressed = false;
                     }
                 }, this.LONG_PRESS_DELAY_MS);
             }
@@ -1061,6 +1129,22 @@ export class MainOptionsKeyIndicator extends Component {
         this.button.addEventListener(["mouseleave", "mouseout"], () => {
             this.hideIndicatorTimerText(true);
         });
+    }
+
+    pulseIndicatorTimerText() {
+        let indicatorTimerTextElement = this.indicatorTimerText.getElement();
+
+        if(this.pulseIndicatorTimerTextTimeout) {
+            clearTimeout(this.pulseIndicatorTimerTextTimeout);
+            this.pulseIndicatorTimerTextTimeout = null;
+        }
+        indicatorTimerTextElement.classList.remove(this.INDICATOR_TIMER_PULSE_CLASS);
+
+        indicatorTimerTextElement.classList.add(this.INDICATOR_TIMER_PULSE_CLASS);
+
+        this.pulseIndicatorTimerTextTimeout = setTimeout(() => {
+            indicatorTimerTextElement.classList.remove(this.INDICATOR_TIMER_PULSE_CLASS);
+        }, this.PULSE_TIMER_TEXT_DELAY_MS);
     }
 
     fetchTimerValue(time) {
@@ -1077,7 +1161,14 @@ export class MainOptionsKeyIndicator extends Component {
         }
         this.indicatorTimerText.getElement().innerHTML = text;
         this.getElement().title = hoverText;
-        if(time < 30) this.showIndicatorTimerText(false);
+        if(time < 30) {
+            this.showIndicatorTimerText(false);
+            if(time === 20) {
+                this.pulseIndicatorTimerText();
+            } else if(time <= 10 && (time % 2 === 0)) {
+                this.pulseIndicatorTimerText();
+            }
+        }
     }
 
     showIndicatorTimerText(withHideTimeout) {
@@ -1090,12 +1181,13 @@ export class MainOptionsKeyIndicator extends Component {
 
     hideIndicatorTimerText(withTimeout) {
         this._clearIndicatorTimerTextTimeout();
+        let indicatorTimerTextElement = this.indicatorTimerText.getElement();
         if(withTimeout) {
             this.showIndicatorTimerTextTimeout = setTimeout(() => {
-                this.indicatorTimerText.getElement().classList.remove(this.INDICATOR_TIMER_SHOW_CLASS);
+                indicatorTimerTextElement.classList.remove(this.INDICATOR_TIMER_SHOW_CLASS);
             }, this.HIDE_TIMER_TEXT_DELAY_MS);
         } else {
-            this.indicatorTimerText.getElement().classList.remove(this.INDICATOR_TIMER_SHOW_CLASS);
+            indicatorTimerTextElement.classList.remove(this.INDICATOR_TIMER_SHOW_CLASS);
         }
     }
 
@@ -1143,6 +1235,7 @@ export class MainOptionsSearch extends Component {
         this.SEARCH_PANEL_CLASSES = "p p-out p-round".split(" ");
         this.SEARCH_PLACEHOLDER_TEXT_OPTIONS = ["Search for anything...", "Search for something...", "What are you looking for?", "Type something to search...", "What do you want?", "Finding something?"];
         this.ICON_DISABLED_CLASS = "input-search-icon-disabled";
+        this.SEARCH_INPUT_EXPANDED_CLASS = "input-search-expanded";
     }
 
     create() {
@@ -1183,13 +1276,13 @@ export class MainOptionsSearch extends Component {
         this.input.getElement().placeholder = focusIn ? this._getRandomSearchPlaceholder() : "";
         if(focusIn) {
             this.icon.getElement().classList.add(this.ICON_DISABLED_CLASS);
-            this.input.getElement().style.width = "250px";
+            this.input.getElement().classList.add(this.SEARCH_INPUT_EXPANDED_CLASS);
             this.page.closeAllMoreInfosAndScrollToTop();
             this.page.forceEncrypt();
         } else {
             if(!this.getSearchValue()) {
                 this.icon.getElement().classList.remove(this.ICON_DISABLED_CLASS);
-                this.input.getElement().style.width = "150px";
+                this.input.getElement().classList.remove(this.SEARCH_INPUT_EXPANDED_CLASS);
                 this.page.show(true);
             }
         }
@@ -1291,10 +1384,16 @@ export class EditView extends Component {
         this.EDIT_VIEW_ROW_ID_PREFIX = "edit-view-row-";
         this.EDIT_TEXT_WRAPPER_ID_PREFIX = "edit-text-wrapper-";
         this.EDIT_VIEW_CLASSES = "v hv-l vh-c".split(" ");
-        this.EDIT_VIEW_ROW_CLASSES = "h hv-c vh-c edit-view-row".split(" ");
+
+        this.EDIT_VIEW_ROW_WRAPPER_CLASSES = "v hv-l vh-c".split(" ");
+        this.EDIT_VIEW_ROW_WRAPPER_ID = "edit-view-row-wrapper";
+
+        this.EDIT_VIEW_ROW_CLASSES = "h hv-l vh-c edit-view-row".split(" ");
         this.EDIT_VIEW_ROW_HEADER_CLASS = "h hv-r vh-c edit-view-row-header".split(" ");
         this.EDIT_VIEW_ROW_INPUT_CLASS = "edit-view-row-input";
-        this.EDIT_VIEW_FOOTER_ROW_CLASSES = "h hv-c vh-c edit-view-row".split(" ");
+
+        this.footerDivider = new MainRowDivider(app, page);
+        this.EDIT_VIEW_FOOTER_ROW_CLASSES = "h hv-c vh-c edit-view-row-footer".split(" ");
 
         this.PASSWORD_HEADER = passEntryConfig.password.value;
         this.EDIT_PASSWORD_MESSAGE = "Type to change password";
@@ -1304,8 +1403,9 @@ export class EditView extends Component {
 
     create() {
         let element = documentCreateElement("div", this.label, this.EDIT_VIEW_CLASSES);
-        element.style.maxHeight = is_mobile_or_tablet_view() ? "60vh" : "600px";
         let entryConfig = this.config.EntryConfig;
+        
+        let rowWrapper = documentCreateElement("div", this.EDIT_VIEW_ROW_WRAPPER_ID, this.EDIT_VIEW_ROW_WRAPPER_CLASSES);
 
         Object.entries(this.inputs).forEach(entry => {
             let field = entry[0];
@@ -1326,8 +1426,12 @@ export class EditView extends Component {
             row.appendChild(rowHeader);
             row.appendChild(inputElementWrapper);
 
-            element.appendChild(row);
+            rowWrapper.appendChild(row);
         })
+
+        element.appendChild(rowWrapper);
+
+        element.appendChild(this.footerDivider.create());
 
         let footer = documentCreateElement("div", null, this.EDIT_VIEW_FOOTER_ROW_CLASSES);
 
@@ -1552,7 +1656,10 @@ export class DraggableMenu extends Component {
     }
 
     setup() {
-        this.dragElement();
+        if(!this.app.isMobileView()) {
+            this.dragElement();
+        }
+
         this.homeButton.disable();
         this.backButton.disable();
 
@@ -1567,12 +1674,14 @@ export class DraggableMenu extends Component {
         this.backButton.addEventListener(['click'], () => {
             this.app.shownPage.referringPage.show(false);
         });
-
-        let tooltipSide = "LEFT";
-        if(this.orientation === CacheKeys.DRAGGABLE_MENU_ORIENTATION.HORIZONTAL) tooltipSide = "TOP";
-        this.helperTooltip.createAndAlignToComponent(this.wrapper, tooltipSide);
-        this.helperTooltip.setup();
-        this.helperTooltip.show();
+        
+        if(!this.app.isMobileView()) {
+            let tooltipSide = "LEFT";
+            if(this.orientation === CacheKeys.DRAGGABLE_MENU_ORIENTATION.HORIZONTAL) tooltipSide = "TOP";
+            this.helperTooltip.createAndAlignToComponent(this.wrapper, tooltipSide);
+            this.helperTooltip.setup();
+            this.helperTooltip.show();
+        }
     }
 
     setLightDarkModeButtonIcon() {
@@ -1662,5 +1771,38 @@ export class DraggableMenu extends Component {
         } else {
             throw new Error("Invalid orientation provided")
         }
+    }
+}
+
+
+
+export class RandomGifLoader extends Component {
+    constructor(app, page) {
+        super("id", "gif-loader-wrapper", page, app);
+
+        this.GIF_LOADER_PREFIX = "gif-loader-";
+        this.GIFS = ["1", "2", "3", "4"];
+        this.loaders = [];
+
+        this.setup();
+    }
+
+    setup() {
+        this.GIFS.forEach(num => {
+            let id = this.GIF_LOADER_PREFIX + num;
+            this.loaders.push(new Element("id", id));
+        })
+    }
+
+    show() {
+        if(!this.loaders.length) return;
+
+        let ind = Math.floor(Math.random() * this.loaders.length);
+        
+        this.loaders.forEach(l => l.hide());
+        
+        this.loaders[ind].show();
+
+        super.show();
     }
 }

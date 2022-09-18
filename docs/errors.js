@@ -1,5 +1,20 @@
 const debugLogs = false;
-const debugLog = (arg) => {if(debugLogs) console.log(arg)};
+const debugLog = (arg) => {
+    if(debugLogs) {
+        console.log(arg);
+        mobileDebug(arg);
+    }
+};
+
+var mobileDebug = (arg) => {
+    if(debugLogs) {
+        let log = document.createElement("div");
+        log.innerHTML = arg;
+        let debugDiv = document.getElementById("DEBUG");
+        debugDiv.appendChild(log);
+        debugDiv.style.display = "block";
+    }
+}
 
 const AppErrorType = {
     CACHE_ERROR: "CacheError",

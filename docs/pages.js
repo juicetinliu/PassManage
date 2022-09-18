@@ -206,9 +206,6 @@ export class MainPage extends Page {
 
     setup() {
         super.setup();
-        let mainContent = this.mainContent.getElement();
-        
-        mainContent.style.width = is_mobile_or_tablet_view() ? "60vw" : "800px";
     }
 
     show(update) {
@@ -216,11 +213,15 @@ export class MainPage extends Page {
         if(update) this.updateMainTableEntries(this.app.getPassManagerEntries());
         this.mainOptionsBar.show();
         this.components.mainKeyIndicator.showIndicatorTimerText(true);
+
+        if(this.app.isMobileView()) this.app.mainPanel.hide();
     }
 
     hide() {
         this.mainOptionsBar.hide();
         super.hide();
+
+        if(this.app.isMobileView()) this.app.mainPanel.show();
     }
 
     create() {
