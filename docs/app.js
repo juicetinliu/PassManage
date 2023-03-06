@@ -321,6 +321,8 @@ export class App {
             this.passFile = passFile;
 
             await this.RESET_PASS_MANAGER();
+
+            debugLog("Saving secrets from PassFile instead");
             this.passManager.saveSecrets(this.passFile.getFirst(), this.passFile.getLast());
 
             //we overwrite/save any fs for the logged-in user since that's needed to decrypt entries
@@ -334,6 +336,7 @@ export class App {
 
             try {
                 let entries = this.passManager.entriesFromStrings(this.passFile.getRawEntries());
+                debugLog("Attempting to upload entries from file to fire");
                 if(this.fire.validateFireUser(false)) {
                     let len = entries.length;
                     entries.forEach((entry, index) => {
@@ -373,6 +376,7 @@ export class App {
         a.click();
           
         URL.revokeObjectURL(a.href);
+        debugLog("Downloaded PassFile");
     }
 
     async addPassEntry(input, referringPage) {

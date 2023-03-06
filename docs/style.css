@@ -640,6 +640,10 @@ body {
     color: var(--highlight-blue);
 }
 
+.encrypted-info-pass-copy-button {
+    margin: 0 0 0 20px;
+}
+
 .encrypted-info-toggle-button {
     margin: 0 0 0 20px;
 }
@@ -656,6 +660,7 @@ body {
 .encrypted-info-text-content-password {
     overflow-x: auto;
     white-space: nowrap;
+    flex-grow: 1;
 }
 
 .encrypted-info-content-secrets {

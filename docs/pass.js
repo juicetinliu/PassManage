@@ -290,7 +290,7 @@ export class PassManager {
             });
         }
         
-        let fsh = CryptoJS.SHA256(fs).toString(this.config.SHA256ToStringEncoding)
+        let fsh = CryptoJS.SHA256(fs).toString(this.config.SHA256ToStringEncoding);
         this.saveSecrets(fs, fsh);
     }
 
@@ -739,6 +739,7 @@ export class PassFile { // encrypt/decrypt with appToken
     }
 
     setRawFromEntryStrings(fileSecret, entryStrings, fileSecretHash, encrypt = false, appToken) {
+        debugLog("Generating PassFile raw data from entries");
         this.rawEntries = entryStrings;
         this.first = fileSecret;
         this.last = fileSecretHash;
@@ -758,6 +759,7 @@ export class PassFile { // encrypt/decrypt with appToken
     decryptFileAndProcess(key) {
         if(!key) throw new AppError("key needed to decrypt this PassFile", AppErrorType.MISSING_APP_TOKEN);
 
+        debugLog("Decrypting PassFile");
         this.raw = this.passHandler.decryptToString(this.raw, key);
 
         this.processFile();
@@ -783,6 +785,7 @@ export class PassFile { // encrypt/decrypt with appToken
     _encryptFile(key) {
         if(!key) throw new Error("key needed to encrypt this PassFile");
 
+        debugLog("Encrypting PassFile");
         return this.passHandler.encryptToString(this.raw, key);
     }
 

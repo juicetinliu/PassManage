@@ -92,6 +92,7 @@
     height: auto;
     max-height: none;
     margin: 15px;
+    width: calc(100% - 30px);
 }
 
 .mobile-view .entry-row-header-website-divider {
@@ -101,6 +102,19 @@
 .mobile-view .entry-row-header-wrapper {
     gap: 10px;
     padding-bottom: 5px;
+    flex-wrap: nowrap;
+}
+
+.mobile-view .entry-row {
+    flex-wrap: wrap;
+}
+
+.mobile-view .entry-col-username {
+    width: 150px;
+}
+
+.mobile-view .entry-col-password {
+    width: 150px;
 }
 
 .mobile-view .entry-tag {
@@ -109,6 +123,12 @@
 
 .mobile-view .entry-website-link {
     font-size: 12px;
+}
+
+.mobile-view .entry-website-wrapper {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 20px;
 }
 
 .mobile-view #input-search {

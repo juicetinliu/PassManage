@@ -29,6 +29,10 @@
     z-index: 30;
 }
 
+.encrypted-info-pass-copy-tooltip {
+    width: max-content;
+}
+
 .tooltip-show {
     opacity: 1.0;
     visibility: visible;

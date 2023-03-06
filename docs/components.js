@@ -223,6 +223,8 @@ export class Tooltip extends Component {
         tooltip.classList.add(this.TOOLTIP_SIDES[side]);
 
         element.appendChild(tooltip);
+
+        return tooltip;
     }
 
     setText(text) {
@@ -425,11 +427,12 @@ class SmallSquareLoader extends Component {
 class EncryptedInformation extends Component {
     constructor(app, page, tag, passEntryField, info, encryptedPlaceholderText = "", emptyFieldText = "-"){
         super("id", "encrypted-info-component-" + passEntryField + "-" + tag, page, app);
+        let passEntryConfig = this.config.EntryConfig;
         this.passEntryField = passEntryField;
         this.encryptedInfo = info;
         this.encryptedPlaceholderText = encryptedPlaceholderText;
         this.emptyFieldText = emptyFieldText;
-
+        this.PASSWORD_HEADER = passEntryConfig.password.value;
 
         this.MAIN_CONTENT_CLASS = "encrypted-info-content-" + passEntryField;
         this.CONTENT_CLASSES = (this.MAIN_CONTENT_CLASS + " h hv-l vh-c").split(" ");
@@ -446,6 +449,14 @@ class EncryptedInformation extends Component {
 
         this.loader = new SmallSquareLoader(app, page, "encrypted-info-loader-" + passEntryField + "-" + tag);
 
+        if(passEntryField === this.PASSWORD_HEADER) {
+            this.passwordCopyButton = new IconButton(app, page, "encrypted-info-" + passEntryField + "-" + tag + "-copy", "content_copy", "Copy");
+            this.PASSWORD_COPY_BUTTON_CLASS = "encrypted-info-pass-copy-button";
+
+            this.copyTooltip = new Tooltip(this.app, this.page, this.label, "Copied!");
+            this.COPY_TOOLTIP_CLASS = "encrypted-info-pass-copy-tooltip";
+        }
+
         this.encrypted = true;
     }
 
@@ -460,12 +471,19 @@ class EncryptedInformation extends Component {
         infoText.innerHTML = this.formatEncryptedText();
 
         let loader = this.loader.create();
-        loader.classList.add("hide");
+        loader.classList.add(this.loader.HIDE_CLASS);
 
         infoContent.appendChild(loader);
         infoContent.appendChild(infoText);
 
         element.appendChild(infoContent);
+
+        if(this.passwordCopyButton) {
+            let button = this.passwordCopyButton.create();
+            button.classList.add(this.passwordCopyButton.HIDE_CLASS);
+            button.classList.add(this.PASSWORD_COPY_BUTTON_CLASS);
+            element.appendChild(button);
+        }
 
         if(this.encryptedInfo) {
             let button = this.toggleButton.create();
@@ -482,6 +500,23 @@ class EncryptedInformation extends Component {
             this.encrypted = !this.encrypted;
             this.toggleEncryption(this.encrypted);
         });
+
+        if(this.passwordCopyButton) {
+            this.passwordCopyButton.addEventListener(['click'], () => {
+                if(!this.encrypted) {
+                    navigator.clipboard.writeText(this.encryptedInfoText.getElement().innerHTML);
+                    this.copyTooltip.show();
+                    setTimeout(() => {
+                        this.copyTooltip.hide();
+                    }, 1000);
+                }
+            });
+
+            let tt = this.copyTooltip.createAndAlignToComponent(this, "LEFT");
+            tt.classList.add(this.COPY_TOOLTIP_CLASS)
+            this.copyTooltip.setup();
+            this.copyTooltip.hide();
+        }
     }
 
     async toggleEncryption(encrypted) {
@@ -525,7 +560,16 @@ class EncryptedInformation extends Component {
             }
         }
         //check for existence in case entry is deleted after decryption
-        if(this.exists()) encryptedInfoTextElement.innerHTML = text;
+        if(this.exists()) {
+            encryptedInfoTextElement.innerHTML = text;
+            if(this.passwordCopyButton) {
+                if(!this.encrypted) {
+                    this.passwordCopyButton.show();
+                } else {
+                    this.passwordCopyButton.hide();
+                }
+            }
+        }
     }
 
     async decryptText(text) {
@@ -693,6 +737,7 @@ class MainPassEntryRow extends Component {
         this.WEBSITE_HEADER = passEntryConfig.website.value;
         this.LINK_ID = "link";
         this.LINK_CLASS = "entry-website-link";
+        this.WEBSITE_WRAPPER_CLASS = "entry-website-wrapper"
 
         this.SHOW_LESS_ICON_NAME = "expand_less";
         this.SHOW_MORE_ICON_NAME = "expand_more";
@@ -726,7 +771,7 @@ class MainPassEntryRow extends Component {
                     headerWrapper.appendChild(contentWrapper);
                 } else if (header === this.WEBSITE_HEADER) {
                     if(content) {
-                        let contentWrapper = documentCreateElement("div", contentID);
+                        let contentWrapper = documentCreateElement("div", contentID, this.WEBSITE_WRAPPER_CLASS);
                         if(content.match(this.app.CONSTANTS.WEBSITE_REGEXP)) {
                             let address = content;
                             
@@ -745,7 +790,7 @@ class MainPassEntryRow extends Component {
                         headerWrapper.appendChild(contentWrapper);
                     }
                 } else {
-                    let entryColElement = documentCreateElement("div", contentID, this.ENTRY_COL_CLASS); //Eg. id="Google-tag"
+                    let entryColElement = documentCreateElement("div", contentID, [this.ENTRY_COL_CLASS, this.ENTRY_COL_CLASS+ "-" + header]); //Eg. id="Google-tag"
 
                     if(header === this.PASSWORD_HEADER) {
                         entryColElement.appendChild(this.passwordEncryptedInformation.create());
