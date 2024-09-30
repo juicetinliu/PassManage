@@ -455,6 +455,7 @@ class EncryptedInformation extends Component {
 
             this.copyTooltip = new Tooltip(this.app, this.page, this.label, "Copied!");
             this.COPY_TOOLTIP_CLASS = "encrypted-info-pass-copy-tooltip";
+            this.PASSWORD_DATA_ATTRIBUTE_NAME = "p";
         }
 
         this.encrypted = true;
@@ -504,7 +505,7 @@ class EncryptedInformation extends Component {
         if(this.passwordCopyButton) {
             this.passwordCopyButton.addEventListener(['click'], () => {
                 if(!this.encrypted) {
-                    navigator.clipboard.writeText(this.encryptedInfoText.getElement().innerHTML);
+                    navigator.clipboard.writeText(this.encryptedInfoText.getElement().dataset[this.PASSWORD_DATA_ATTRIBUTE_NAME]);
                     this.copyTooltip.show();
                     setTimeout(() => {
                         this.copyTooltip.hide();
@@ -562,6 +563,7 @@ class EncryptedInformation extends Component {
         //check for existence in case entry is deleted after decryption
         if(this.exists()) {
             encryptedInfoTextElement.innerHTML = text;
+            encryptedInfoTextElement.dataset[this.PASSWORD_DATA_ATTRIBUTE_NAME] = text;
             if(this.passwordCopyButton) {
                 if(!this.encrypted) {
                     this.passwordCopyButton.show();
